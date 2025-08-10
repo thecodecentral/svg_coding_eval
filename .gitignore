@@ -1,0 +1,35 @@
+# Ignore symlinks in workspace directories
+**/workspace/product_catalog.json
+**/workspace/images
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Archive files (keeping outfit.zip tracked if needed)
+# *.zip
