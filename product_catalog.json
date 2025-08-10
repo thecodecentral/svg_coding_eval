@@ -1,0 +1,416 @@
+{
+  "belts": [
+    {
+      "name": "Classic Leather Belt",
+      "brand": "Brand A",
+      "image_path": "images/belts/belt1.jpg"
+    },
+    {
+      "name": "Woven Canvas Belt",
+      "brand": "Brand B",
+      "image_path": "images/belts/belt2.jpg"
+    },
+    {
+      "name": "Reversible Belt",
+      "brand": "Brand C",
+      "image_path": "images/belts/belt3.jpg"
+    },
+    {
+      "name": "Chain Link Belt",
+      "brand": "Brand D",
+      "image_path": "images/belts/belt4.jpg"
+    },
+    {
+      "name": "Braided Leather Belt",
+      "brand": "Brand E",
+      "image_path": "images/belts/belt5.jpg"
+    },
+    {
+      "name": "Designer Buckle Belt",
+      "brand": "Brand F",
+      "image_path": "images/belts/belt6.jpg"
+    }
+  ],
+  "bottoms": [
+    {
+      "name": "Floral Midi Dress",
+      "brand": "Brand G",
+      "image_path": "images/bottoms/dress1.jpg"
+    },
+    {
+      "name": "Wrap Dress",
+      "brand": "Brand H",
+      "image_path": "images/bottoms/dress2.jpg"
+    },
+    {
+      "name": "Cocktail Dress",
+      "brand": "Brand A",
+      "image_path": "images/bottoms/dress3.jpg"
+    },
+    {
+      "name": "Slim Fit Jeans",
+      "brand": "Brand B",
+      "image_path": "images/bottoms/jeans1.jpg"
+    },
+    {
+      "name": "High-Waisted Jeans",
+      "brand": "Brand C",
+      "image_path": "images/bottoms/jeans2.jpg"
+    },
+    {
+      "name": "Distressed Denim",
+      "brand": "Brand D",
+      "image_path": "images/bottoms/jeans3.jpg"
+    },
+    {
+      "name": "Wide Leg Jeans",
+      "brand": "Brand E",
+      "image_path": "images/bottoms/jeans4.jpg"
+    },
+    {
+      "name": "Pleated Midi Skirt",
+      "brand": "Brand F",
+      "image_path": "images/bottoms/skirt1.jpg"
+    },
+    {
+      "name": "A-Line Skirt",
+      "brand": "Brand G",
+      "image_path": "images/bottoms/skirt2.jpg"
+    },
+    {
+      "name": "Pencil Skirt",
+      "brand": "Brand H",
+      "image_path": "images/bottoms/skirt3.jpg"
+    }
+  ],
+  "earrings": [
+    {
+      "name": "Pearl Drop Earrings",
+      "brand": "Brand A",
+      "image_path": "images/earrings/earrings1.jpg"
+    },
+    {
+      "name": "Gold Hoop Earrings",
+      "brand": "Brand B",
+      "image_path": "images/earrings/earrings2.jpg"
+    },
+    {
+      "name": "Crystal Stud Earrings",
+      "brand": "Brand C",
+      "image_path": "images/earrings/earrings3.jpg"
+    },
+    {
+      "name": "Chandelier Earrings",
+      "brand": "Brand D",
+      "image_path": "images/earrings/earrings4.jpg"
+    },
+    {
+      "name": "Minimalist Bar Earrings",
+      "brand": "Brand E",
+      "image_path": "images/earrings/earrings5.jpg"
+    }
+  ],
+  "gloves": [
+    {
+      "name": "Leather Driving Gloves",
+      "brand": "Brand F",
+      "image_path": "images/gloves/gloves1.jpg"
+    },
+    {
+      "name": "Cashmere Gloves",
+      "brand": "Brand G",
+      "image_path": "images/gloves/gloves2.jpg"
+    },
+    {
+      "name": "Fingerless Gloves",
+      "brand": "Brand H",
+      "image_path": "images/gloves/gloves3.jpg"
+    },
+    {
+      "name": "Winter Wool Gloves",
+      "brand": "Brand A",
+      "image_path": "images/gloves/gloves4.jpg"
+    },
+    {
+      "name": "Evening Opera Gloves",
+      "brand": "Brand B",
+      "image_path": "images/gloves/gloves5.jpg"
+    },
+    {
+      "name": "Touchscreen Gloves",
+      "brand": "Brand C",
+      "image_path": "images/gloves/gloves6.jpg"
+    }
+  ],
+  "handbags": [
+    {
+      "name": "Tote Bag",
+      "brand": "Brand D",
+      "image_path": "images/handbags/handbag1.jpg"
+    },
+    {
+      "name": "Crossbody Bag",
+      "brand": "Brand E",
+      "image_path": "images/handbags/handbag2.jpg"
+    },
+    {
+      "name": "Clutch Purse",
+      "brand": "Brand F",
+      "image_path": "images/handbags/handbag3.jpg"
+    },
+    {
+      "name": "Shoulder Bag",
+      "brand": "Brand G",
+      "image_path": "images/handbags/handbag4.jpg"
+    },
+    {
+      "name": "Bucket Bag",
+      "brand": "Brand H",
+      "image_path": "images/handbags/handbag5.jpg"
+    },
+    {
+      "name": "Satchel Bag",
+      "brand": "Brand A",
+      "image_path": "images/handbags/handbag6.jpg"
+    },
+    {
+      "name": "Hobo Bag",
+      "brand": "Brand B",
+      "image_path": "images/handbags/handbag7.jpg"
+    }
+  ],
+  "hats": [
+    {
+      "name": "Fedora Hat",
+      "brand": "Brand C",
+      "image_path": "images/hats/hat1.jpg"
+    },
+    {
+      "name": "Baseball Cap",
+      "brand": "Brand D",
+      "image_path": "images/hats/hat2.jpg"
+    },
+    {
+      "name": "Wide Brim Sun Hat",
+      "brand": "Brand E",
+      "image_path": "images/hats/hat3.jpg"
+    },
+    {
+      "name": "Beanie",
+      "brand": "Brand F",
+      "image_path": "images/hats/hat4.jpg"
+    },
+    {
+      "name": "Beret",
+      "brand": "Brand G",
+      "image_path": "images/hats/hat5.jpg"
+    }
+  ],
+  "necklaces": [
+    {
+      "name": "Pearl Strand Necklace",
+      "brand": "Brand H",
+      "image_path": "images/necklaces/necklace1.jpg"
+    },
+    {
+      "name": "Gold Chain Necklace",
+      "brand": "Brand A",
+      "image_path": "images/necklaces/necklace2.jpg"
+    },
+    {
+      "name": "Pendant Necklace",
+      "brand": "Brand B",
+      "image_path": "images/necklaces/necklace3.jpg"
+    },
+    {
+      "name": "Choker Necklace",
+      "brand": "Brand C",
+      "image_path": "images/necklaces/necklace4.jpg"
+    }
+  ],
+  "scaves": [
+    {
+      "name": "Silk Scarf",
+      "brand": "Brand D",
+      "image_path": "images/scaves/scarf1.jpg"
+    },
+    {
+      "name": "Cashmere Scarf",
+      "brand": "Brand E",
+      "image_path": "images/scaves/scarf2.jpg"
+    },
+    {
+      "name": "Infinity Scarf",
+      "brand": "Brand F",
+      "image_path": "images/scaves/scarf3.jpg"
+    },
+    {
+      "name": "Printed Square Scarf",
+      "brand": "Brand G",
+      "image_path": "images/scaves/scarf4.jpg"
+    },
+    {
+      "name": "Wool Blanket Scarf",
+      "brand": "Brand H",
+      "image_path": "images/scaves/scarf5.jpg"
+    },
+    {
+      "name": "Lightweight Summer Scarf",
+      "brand": "Brand A",
+      "image_path": "images/scaves/scarf6.jpg"
+    },
+    {
+      "name": "Fringed Wrap Scarf",
+      "brand": "Brand B",
+      "image_path": "images/scaves/scarf7.jpg"
+    }
+  ],
+  "shoes": [
+    {
+      "name": "Leather Oxford Shoes",
+      "brand": "Brand C",
+      "image_path": "images/shoes/shoes1.jpg"
+    },
+    {
+      "name": "High-Top Sneakers",
+      "brand": "Brand D",
+      "image_path": "images/shoes/shoes2.jpg"
+    },
+    {
+      "name": "Ankle Boots",
+      "brand": "Brand E",
+      "image_path": "images/shoes/shoes3.jpg"
+    },
+    {
+      "name": "Running Shoes",
+      "brand": "Brand F",
+      "image_path": "images/shoes/shoes4.jpg"
+    }
+  ],
+  "sunglasses": [
+    {
+      "name": "Aviator Sunglasses",
+      "brand": "Brand G",
+      "image_path": "images/sunglasses/sunglassess1.jpg"
+    },
+    {
+      "name": "Cat Eye Sunglasses",
+      "brand": "Brand H",
+      "image_path": "images/sunglasses/sunglassess2.jpg"
+    },
+    {
+      "name": "Round Frame Sunglasses",
+      "brand": "Brand A",
+      "image_path": "images/sunglasses/sunglassess3.jpg"
+    },
+    {
+      "name": "Wayfarer Sunglasses",
+      "brand": "Brand B",
+      "image_path": "images/sunglasses/sunglassess4.jpg"
+    },
+    {
+      "name": "Sport Sunglasses",
+      "brand": "Brand C",
+      "image_path": "images/sunglasses/sunglassess5.jpg"
+    }
+  ],
+  "tops": [
+    {
+      "name": "Wool Overcoat",
+      "brand": "Brand D",
+      "image_path": "images/tops/coat1.jpg"
+    },
+    {
+      "name": "Trench Coat",
+      "brand": "Brand E",
+      "image_path": "images/tops/coat2.jpg"
+    },
+    {
+      "name": "Puffer Coat",
+      "brand": "Brand F",
+      "image_path": "images/tops/coat3.jpg"
+    },
+    {
+      "name": "Maxi Dress",
+      "brand": "Brand G",
+      "image_path": "images/tops/dress1.png"
+    },
+    {
+      "name": "Shift Dress",
+      "brand": "Brand H",
+      "image_path": "images/tops/dress2.png"
+    },
+    {
+      "name": "Evening Gown",
+      "brand": "Brand A",
+      "image_path": "images/tops/dress7.jpg"
+    },
+    {
+      "name": "Denim Jacket",
+      "brand": "Brand B",
+      "image_path": "images/tops/jacket1.jpg"
+    },
+    {
+      "name": "Leather Jacket",
+      "brand": "Brand C",
+      "image_path": "images/tops/jacket2.jpg"
+    },
+    {
+      "name": "Bomber Jacket",
+      "brand": "Brand D",
+      "image_path": "images/tops/jacket3.jpg"
+    },
+    {
+      "name": "Cotton T-Shirt",
+      "brand": "Brand E",
+      "image_path": "images/tops/top1.png"
+    },
+    {
+      "name": "Silk Blouse",
+      "brand": "Brand F",
+      "image_path": "images/tops/top2.png"
+    },
+    {
+      "name": "Knit Sweater",
+      "brand": "Brand G",
+      "image_path": "images/tops/top3.png"
+    },
+    {
+      "name": "Linen Shirt",
+      "brand": "Brand H",
+      "image_path": "images/tops/top4.png"
+    }
+  ],
+  "watches": [
+    {
+      "name": "Classic Analog Watch",
+      "brand": "Brand A",
+      "image_path": "images/watches/watch1.jpg"
+    },
+    {
+      "name": "Digital Sport Watch",
+      "brand": "Brand B",
+      "image_path": "images/watches/watch2.jpg"
+    },
+    {
+      "name": "Chronograph Watch",
+      "brand": "Brand C",
+      "image_path": "images/watches/watch3.jpg"
+    },
+    {
+      "name": "Smart Watch",
+      "brand": "Brand D",
+      "image_path": "images/watches/watch4.jpg"
+    },
+    {
+      "name": "Dress Watch",
+      "brand": "Brand E",
+      "image_path": "images/watches/watch5.jpg"
+    },
+    {
+      "name": "Dive Watch",
+      "brand": "Brand F",
+      "image_path": "images/watches/watch6.jpg"
+    }
+  ]
+}
