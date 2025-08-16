@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Coding Evaluation Findings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: white;
+            font-size: 20px;
+        }
+        
+        h2 {
+            color: #2d3748;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .table-wrapper {
+            overflow: auto;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        table {
+            width: 100%;
+            min-width: 800px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 14px;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        
+        th {
+            background: linear-gradient(180deg, #f7fafc 0%, #edf2f7 100%);
+            color: #4a5568;
+            font-weight: 600;
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 12px;
+            border-bottom: 2px solid #cbd5e0;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+        }
+        
+        th:first-child {
+            text-align: left;
+            padding-left: 16px;
+            min-width: 250px;
+            position: sticky;
+            left: 0;
+            z-index: 21;
+            background: linear-gradient(180deg, #f7fafc 0%, #edf2f7 100%);
+        }
+        
+        td {
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            transition: background-color 0.2s;
+        }
+        
+        td:first-child {
+            text-align: left;
+            padding-left: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            position: sticky;
+            left: 0;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            z-index: 10;
+        }
+        
+        tbody tr:hover td {
+            background-color: #f7fafc;
+        }
+        
+        tbody tr:hover td:first-child {
+            background-color: #f7fafc;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .badge-warning {
+            background: #fed7aa;
+            color: #7c2d12;
+        }
+        
+        .badge-danger {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .notes-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .note-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .note-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .note-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .note-content {
+            font-size: 14px;
+            line-height: 1.6;
+            opacity: 0.95;
+        }
+        
+        .status-icon {
+            font-size: 16px;
+            margin-right: 4px;
+        }
+        
+        .empty-cell {
+            color: #cbd5e0;
+            font-size: 12px;
+        }
+        
+        .artifact-img {
+            max-width: 400px;
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .artifact-img:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+            animation: scaleIn 0.3s;
+        }
+        
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .notes-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 SVG Coding Evaluation Dashboard</h1>
+        <p class="subtitle">Comprehensive evaluation of AI coding assistants</p>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📊</div>
+                <h2>Evaluation Results</h2>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Agentic Tool</th>
+                            <th>Grok 4<br/> (Cursor)</th>
+                            <th>Sonnet 4<br/> (Cursor)</th>
+                            <th>Opus 4.1<br/> (Cusor)</th>
+                            <th>GPT 5<br/> (Cusor)</th>
+                            <th>Opus 4.1<br/> (Claude Code)</th>
+                            <th>Sonnet 4<br/> (Claude Code)</th>
+                            <th>Opus 4.1<br/> (Cursor CLI)</th>
+                            <th>GPT 5<br/> (Cursor CLI)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Left column: show initial instructions</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Left column: showing details for selected product?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Left column: abilityt to remove product?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Left column: preview working?</strong></td>
+                            <td>2</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Middle column: are category labels aligned properly?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Middle column: are thumbnails shown on the slice and properly aligned?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Middle column: when I select products, can they be filtered by a category?</strong></td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Middle column: when I select products, can they be filtered by a keyword?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Middle column: when I mouse over a slice, does it show a pop-up animation?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Middle column: When I click on the Mix button, does the pizza animate and with a pleasing animation?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Middle column: When I click on the Mix button, do the empty slices get populated?</strong></td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Right column: Are category toggles shown?</strong></td>
+                            <td>3</td>
+                        </tr>                      
+                        <tr>
+                            <td><strong>Right column: Are the toggles cause the number of slices change dynamically?</strong></td>
+                            <td>3</td>
+                        </tr>                      
+                        <tr>
+                            <td><strong>Mist: Is the UI aesthetically pleasing?</strong></td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Notes</strong></td>
+                            <td>Grok 4 (Cursor) seems to be very good at coding out the business logic. However, it lacks in design sense and the UI is not aesthetically pleasing.</td>
+                        </tr>
+
+                      
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📊</div>
+                <h2>Artifacts Gallery</h2>
+            </div>
+             <div class="table-wrapper">
+                 <table>
+                    <thead>
+                        <tr>
+                            <th>Agentic Tool</th>
+                            <th>-</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>Grok 4 (Cursor)</th>
+                            <td>
+                                <img src="src/cursor/grok4/images/gshot-2025-08-15-222824-eRoI.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                                <img src="src/cursor/grok4/images/gshot-2025-08-15-225029-JtgF.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                                <img src="src/cursor/grok4/images/gshot-2025-08-15-225041-eSkj.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="notes-section">
+            <div class="note-card">
+                <div class="note-title">
+                    <span class="status-icon">⚡</span> Cursor CLI
+                </div>
+                <div class="note-content">
+                    The quality seems to be good but takes a very long time to do anything. Performance could be improved for better developer experience.
+                </div>
+            </div>
+            
+            <div class="note-card">
+                <div class="note-title">
+                    <span class="status-icon">🤖</span> Grok
+                </div>
+                <div class="note-content">
+                    Good with business logic but lacks in design sense. Elements positioned correctly in the wheel, slot toggles are kind of working. The page looks really ugly.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 30px;">
+            <div class="card-header">
+                <div class="card-icon">📝</div>
+                <h2>Evaluation Legend</h2>
+            </div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div><span class="badge badge-success">✅ Working</span> - Feature fully functional</div>
+                <div><span class="badge badge-warning">⚠️ Partial</span> - Partially working</div>
+                <div><span class="badge badge-danger">❌ Failed</span> - Not working</div>
+                <div><span class="empty-cell">—</span> - Not evaluated yet</div>
+            </div>
+        </div>
+    </div>
+    <div id="imageModal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal(event)">&times;</span>
+            <img id="modalImage" src="" alt="Enlarged view">
+        </div>
+    </div>
+
+    <script>
+        function openModal(img) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.classList.add('active');
+            modalImg.src = img.src;
+            modalImg.alt = img.alt;
+        }
+
+        function closeModal(event) {
+            if (event.target === event.currentTarget || event.target.classList.contains('modal-close')) {
+                const modal = document.getElementById('imageModal');
+                modal.classList.remove('active');
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('imageModal');
+                modal.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
