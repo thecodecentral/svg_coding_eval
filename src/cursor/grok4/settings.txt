@@ -1,0 +1,2 @@
+- agent mode
+- grok 4 with max context window

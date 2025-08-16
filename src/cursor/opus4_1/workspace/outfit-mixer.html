@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outfit Mixer - Fashion X</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #fafafa;
+            color: #1a1a1a;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Left Column */
+        .left-column {
+            width: 350px;
+            background: white;
+            padding: 40px 30px;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.05);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .instructions {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .instructions h2 {
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .instructions p {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .instructions li {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .instructions li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #000;
+        }
+
+        /* Selection Table */
+        .selection-panel {
+            display: none;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .selection-table {
+            margin-bottom: 30px;
+        }
+
+        .selection-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 10px;
+            background: #fff;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .selection-item:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .selection-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+
+        .selection-info {
+            flex: 1;
+        }
+
+        .selection-info h4 {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .selection-info p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px 10px;
+            transition: color 0.3s ease;
+        }
+
+        .remove-btn:hover {
+            color: #ff4444;
+        }
+
+        .preview-btn {
+            background: #000;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 15px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .preview-btn:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Preview Panel */
+        .preview-panel {
+            display: none;
+            animation: flipIn 0.6s ease-out;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .preview-item {
+            background: #f5f5f5;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            margin-bottom: 8px;
+        }
+
+        .preview-item p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .back-btn {
+            background: transparent;
+            color: #000;
+            border: 1px solid #000;
+            padding: 12px 30px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .back-btn:hover {
+            background: #000;
+            color: white;
+        }
+
+        /* Middle Column */
+        .middle-column {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: linear-gradient(to bottom, #f8f8f8, #f0f0f0);
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 10px 40px rgba(0,0,0,0.1));
+        }
+
+        .slice {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+
+        .slice:hover {
+            filter: brightness(1.1);
+            transform: scale(1.05);
+        }
+
+        .slice.selected {
+            filter: brightness(0.9);
+        }
+
+        .slice-label {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            fill: #333;
+            text-anchor: middle;
+            pointer-events: none;
+            text-transform: uppercase;
+        }
+
+        .slice-image {
+            pointer-events: none;
+            opacity: 0.9;
+        }
+
+        .mix-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #000;
+            color: white;
+            border: none;
+            font-size: 18px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .mix-button:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 6px 30px rgba(0,0,0,0.4);
+        }
+
+        .mix-button.spinning {
+            animation: spin 2s ease-in-out;
+        }
+
+        /* Right Column */
+        .right-column {
+            width: 300px;
+            background: white;
+            padding: 40px 25px;
+            box-shadow: -2px 0 20px rgba(0,0,0,0.05);
+        }
+
+        .right-column h3 {
+            font-size: 20px;
+            font-weight: 300;
+            margin-bottom: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        .toggle-group {
+            margin-bottom: 35px;
+        }
+
+        .toggle-group h4 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .toggle-item label {
+            font-size: 14px;
+            color: #333;
+            text-transform: capitalize;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: #ddd;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #000;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            left: 27px;
+        }
+
+        /* Product Selection Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            max-height: 80vh;
+            background: white;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .modal-header {
+            padding: 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+        }
+
+        .modal-search {
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .modal-search input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 1px solid #e0e0e0;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .modal-search input:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .modal-body {
+            padding: 30px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .product-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+
+        .product-card h4 {
+            font-size: 14px;
+            font-weight: 400;
+            margin-bottom: 5px;
+        }
+
+        .product-card p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translate(-50%, -40%); opacity: 0; }
+            to { transform: translate(-50%, -50%); opacity: 1; }
+        }
+
+        @keyframes flipIn {
+            from { transform: rotateY(90deg); opacity: 0; }
+            to { transform: rotateY(0); opacity: 1; }
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(720deg); }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Column -->
+        <div class="left-column">
+            <div class="instructions" id="instructions">
+                <h2>Welcome to Outfit Mixer</h2>
+                <p>Create your perfect outfit with our innovative style wheel. Here's how it works:</p>
+                <ul>
+                    <li>Click on any slice of the wheel to browse and select items from that category</li>
+                    <li>Your selections will appear here with details</li>
+                    <li>Use the MIX button to get AI-powered recommendations for remaining categories</li>
+                    <li>Preview your complete outfit when you're ready</li>
+                </ul>
+                <p style="margin-top: 30px; font-style: italic; color: #888;">
+                    Start by clicking on a category slice to begin building your outfit.
+                </p>
+            </div>
+
+            <div class="selection-panel" id="selectionPanel" style="display: none;">
+                <h2 style="font-size: 24px; font-weight: 300; margin-bottom: 25px;">Your Selections</h2>
+                <div class="selection-table" id="selectionTable"></div>
+                <button class="preview-btn" onclick="showPreview()">Preview Outfit</button>
+            </div>
+
+            <div class="preview-panel" id="previewPanel" style="display: none;">
+                <h2 style="font-size: 24px; font-weight: 300; margin-bottom: 25px;">Outfit Preview</h2>
+                <div class="preview-grid" id="previewGrid"></div>
+                <button class="back-btn" onclick="hidePreview()">Back to Selections</button>
+            </div>
+        </div>
+
+        <!-- Middle Column -->
+        <div class="middle-column">
+            <div class="wheel-container">
+                <svg class="wheel" viewBox="0 0 600 600" id="wheel">
+                    <!-- SVG content will be generated by JavaScript -->
+                </svg>
+                <button class="mix-button" id="mixButton" onclick="mixOutfit()">MIX</button>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="right-column">
+            <h3>Customize Your Style</h3>
+            
+            <div class="toggle-group">
+                <h4>Gender</h4>
+                <div class="toggle-item">
+                    <label>Women</label>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+                <div class="toggle-item">
+                    <label>Men</label>
+                    <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+                </div>
+                <div class="toggle-item">
+                    <label>Unisex</label>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+            </div>
+
+            <div class="toggle-group">
+                <h4>Categories</h4>
+                <div id="categoryToggles"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Selection Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-header">
+                <h3 id="modalTitle">Select Item</h3>
+                <div class="modal-search">
+                    <input type="text" placeholder="Search products..." id="searchInput" onkeyup="filterProducts()">
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="product-grid" id="productGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Product catalog data - embedded directly
+        const productCatalog = {
+            "belts": [
+                {"name": "Classic Leather Belt", "brand": "Brand A", "image_path": "images/belts/belt1.jpg"},
+                {"name": "Woven Canvas Belt", "brand": "Brand B", "image_path": "images/belts/belt2.jpg"},
+                {"name": "Reversible Belt", "brand": "Brand C", "image_path": "images/belts/belt3.jpg"},
+                {"name": "Chain Link Belt", "brand": "Brand D", "image_path": "images/belts/belt4.jpg"},
+                {"name": "Braided Leather Belt", "brand": "Brand E", "image_path": "images/belts/belt5.jpg"},
+                {"name": "Designer Buckle Belt", "brand": "Brand F", "image_path": "images/belts/belt6.jpg"}
+            ],
+            "bottoms": [
+                {"name": "Floral Midi Dress", "brand": "Brand G", "image_path": "images/bottoms/dress1.jpg"},
+                {"name": "Wrap Dress", "brand": "Brand H", "image_path": "images/bottoms/dress2.jpg"},
+                {"name": "Cocktail Dress", "brand": "Brand A", "image_path": "images/bottoms/dress3.jpg"},
+                {"name": "Slim Fit Jeans", "brand": "Brand B", "image_path": "images/bottoms/jeans1.jpg"},
+                {"name": "High-Waisted Jeans", "brand": "Brand C", "image_path": "images/bottoms/jeans2.jpg"},
+                {"name": "Distressed Denim", "brand": "Brand D", "image_path": "images/bottoms/jeans3.jpg"},
+                {"name": "Wide Leg Jeans", "brand": "Brand E", "image_path": "images/bottoms/jeans4.jpg"},
+                {"name": "Pleated Midi Skirt", "brand": "Brand F", "image_path": "images/bottoms/skirt1.jpg"},
+                {"name": "A-Line Skirt", "brand": "Brand G", "image_path": "images/bottoms/skirt2.jpg"},
+                {"name": "Pencil Skirt", "brand": "Brand H", "image_path": "images/bottoms/skirt3.jpg"}
+            ],
+            "earrings": [
+                {"name": "Pearl Drop Earrings", "brand": "Brand A", "image_path": "images/earrings/earrings1.jpg"},
+                {"name": "Gold Hoop Earrings", "brand": "Brand B", "image_path": "images/earrings/earrings2.jpg"},
+                {"name": "Crystal Stud Earrings", "brand": "Brand C", "image_path": "images/earrings/earrings3.jpg"},
+                {"name": "Chandelier Earrings", "brand": "Brand D", "image_path": "images/earrings/earrings4.jpg"},
+                {"name": "Minimalist Bar Earrings", "brand": "Brand E", "image_path": "images/earrings/earrings5.jpg"}
+            ],
+            "gloves": [
+                {"name": "Leather Driving Gloves", "brand": "Brand F", "image_path": "images/gloves/gloves1.jpg"},
+                {"name": "Cashmere Gloves", "brand": "Brand G", "image_path": "images/gloves/gloves2.jpg"},
+                {"name": "Fingerless Gloves", "brand": "Brand H", "image_path": "images/gloves/gloves3.jpg"},
+                {"name": "Winter Wool Gloves", "brand": "Brand A", "image_path": "images/gloves/gloves4.jpg"},
+                {"name": "Evening Opera Gloves", "brand": "Brand B", "image_path": "images/gloves/gloves5.jpg"},
+                {"name": "Touchscreen Gloves", "brand": "Brand C", "image_path": "images/gloves/gloves6.jpg"}
+            ],
+            "handbags": [
+                {"name": "Tote Bag", "brand": "Brand D", "image_path": "images/handbags/handbag1.jpg"},
+                {"name": "Crossbody Bag", "brand": "Brand E", "image_path": "images/handbags/handbag2.jpg"},
+                {"name": "Clutch Purse", "brand": "Brand F", "image_path": "images/handbags/handbag3.jpg"},
+                {"name": "Shoulder Bag", "brand": "Brand G", "image_path": "images/handbags/handbag4.jpg"},
+                {"name": "Bucket Bag", "brand": "Brand H", "image_path": "images/handbags/handbag5.jpg"},
+                {"name": "Satchel Bag", "brand": "Brand A", "image_path": "images/handbags/handbag6.jpg"},
+                {"name": "Hobo Bag", "brand": "Brand B", "image_path": "images/handbags/handbag7.jpg"}
+            ],
+            "hats": [
+                {"name": "Fedora Hat", "brand": "Brand C", "image_path": "images/hats/hat1.jpg"},
+                {"name": "Baseball Cap", "brand": "Brand D", "image_path": "images/hats/hat2.jpg"},
+                {"name": "Wide Brim Sun Hat", "brand": "Brand E", "image_path": "images/hats/hat3.jpg"},
+                {"name": "Beanie", "brand": "Brand F", "image_path": "images/hats/hat4.jpg"},
+                {"name": "Beret", "brand": "Brand G", "image_path": "images/hats/hat5.jpg"}
+            ],
+            "necklaces": [
+                {"name": "Pearl Strand Necklace", "brand": "Brand H", "image_path": "images/necklaces/necklace1.jpg"},
+                {"name": "Gold Chain Necklace", "brand": "Brand A", "image_path": "images/necklaces/necklace2.jpg"},
+                {"name": "Pendant Necklace", "brand": "Brand B", "image_path": "images/necklaces/necklace3.jpg"},
+                {"name": "Choker Necklace", "brand": "Brand C", "image_path": "images/necklaces/necklace4.jpg"}
+            ],
+            "scaves": [
+                {"name": "Silk Scarf", "brand": "Brand D", "image_path": "images/scaves/scarf1.jpg"},
+                {"name": "Cashmere Scarf", "brand": "Brand E", "image_path": "images/scaves/scarf2.jpg"},
+                {"name": "Infinity Scarf", "brand": "Brand F", "image_path": "images/scaves/scarf3.jpg"},
+                {"name": "Printed Square Scarf", "brand": "Brand G", "image_path": "images/scaves/scarf4.jpg"},
+                {"name": "Wool Blanket Scarf", "brand": "Brand H", "image_path": "images/scaves/scarf5.jpg"},
+                {"name": "Lightweight Summer Scarf", "brand": "Brand A", "image_path": "images/scaves/scarf6.jpg"},
+                {"name": "Fringed Wrap Scarf", "brand": "Brand B", "image_path": "images/scaves/scarf7.jpg"}
+            ],
+            "shoes": [
+                {"name": "Leather Oxford Shoes", "brand": "Brand C", "image_path": "images/shoes/shoes1.jpg"},
+                {"name": "High-Top Sneakers", "brand": "Brand D", "image_path": "images/shoes/shoes2.jpg"},
+                {"name": "Ankle Boots", "brand": "Brand E", "image_path": "images/shoes/shoes3.jpg"},
+                {"name": "Running Shoes", "brand": "Brand F", "image_path": "images/shoes/shoes4.jpg"}
+            ],
+            "sunglasses": [
+                {"name": "Aviator Sunglasses", "brand": "Brand G", "image_path": "images/sunglasses/sunglassess1.jpg"},
+                {"name": "Cat Eye Sunglasses", "brand": "Brand H", "image_path": "images/sunglasses/sunglassess2.jpg"},
+                {"name": "Round Frame Sunglasses", "brand": "Brand A", "image_path": "images/sunglasses/sunglassess3.jpg"},
+                {"name": "Wayfarer Sunglasses", "brand": "Brand B", "image_path": "images/sunglasses/sunglassess4.jpg"},
+                {"name": "Sport Sunglasses", "brand": "Brand C", "image_path": "images/sunglasses/sunglassess5.jpg"}
+            ],
+            "tops": [
+                {"name": "Wool Overcoat", "brand": "Brand D", "image_path": "images/tops/coat1.jpg"},
+                {"name": "Trench Coat", "brand": "Brand E", "image_path": "images/tops/coat2.jpg"},
+                {"name": "Puffer Coat", "brand": "Brand F", "image_path": "images/tops/coat3.jpg"},
+                {"name": "Maxi Dress", "brand": "Brand G", "image_path": "images/tops/dress1.png"},
+                {"name": "Shift Dress", "brand": "Brand H", "image_path": "images/tops/dress2.png"},
+                {"name": "Evening Gown", "brand": "Brand A", "image_path": "images/tops/dress7.jpg"},
+                {"name": "Denim Jacket", "brand": "Brand B", "image_path": "images/tops/jacket1.jpg"},
+                {"name": "Leather Jacket", "brand": "Brand C", "image_path": "images/tops/jacket2.jpg"},
+                {"name": "Bomber Jacket", "brand": "Brand D", "image_path": "images/tops/jacket3.jpg"},
+                {"name": "Cotton T-Shirt", "brand": "Brand E", "image_path": "images/tops/top1.png"},
+                {"name": "Silk Blouse", "brand": "Brand F", "image_path": "images/tops/top2.png"},
+                {"name": "Knit Sweater", "brand": "Brand G", "image_path": "images/tops/top3.png"},
+                {"name": "Linen Shirt", "brand": "Brand H", "image_path": "images/tops/top4.png"}
+            ],
+            "watches": [
+                {"name": "Classic Analog Watch", "brand": "Brand A", "image_path": "images/watches/watch1.jpg"},
+                {"name": "Digital Sport Watch", "brand": "Brand B", "image_path": "images/watches/watch2.jpg"},
+                {"name": "Chronograph Watch", "brand": "Brand C", "image_path": "images/watches/watch3.jpg"},
+                {"name": "Smart Watch", "brand": "Brand D", "image_path": "images/watches/watch4.jpg"},
+                {"name": "Dress Watch", "brand": "Brand E", "image_path": "images/watches/watch5.jpg"},
+                {"name": "Dive Watch", "brand": "Brand F", "image_path": "images/watches/watch6.jpg"}
+            ]
+        };
+
+        let selectedItems = {};
+        let currentCategory = '';
+
+        // Colors for each category
+        const categoryColors = {
+            'tops': '#FF6B6B',
+            'bottoms': '#4ECDC4',
+            'shoes': '#45B7D1',
+            'handbags': '#96CEB4',
+            'hats': '#FECA57',
+            'sunglasses': '#FF9FF3',
+            'watches': '#54A0FF',
+            'belts': '#C44569',
+            'necklaces': '#F8B500',
+            'earrings': '#786FA6',
+            'scaves': '#F19066',
+            'gloves': '#778BEB'
+        };
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            initializeWheel();
+            initializeCategoryToggles();
+        });
+
+        // Initialize the wheel
+        function initializeWheel() {
+            const svg = document.getElementById('wheel');
+            const categories = Object.keys(productCatalog);
+            const numSlices = categories.length;
+            const anglePerSlice = 360 / numSlices;
+            const centerX = 300;
+            const centerY = 300;
+            const outerRadius = 280;
+            const innerRadius = 60;
+
+            categories.forEach((category, index) => {
+                const startAngle = index * anglePerSlice - 90;
+                const endAngle = (index + 1) * anglePerSlice - 90;
+
+                // Create slice path
+                const slice = createSlice(centerX, centerY, innerRadius, outerRadius, startAngle, endAngle);
+                
+                // Create group for slice
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'slice');
+                g.setAttribute('data-category', category);
+                g.onclick = () => openCategoryModal(category);
+
+                // Create path element
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', slice);
+                path.setAttribute('fill', categoryColors[category]);
+                path.setAttribute('stroke', 'white');
+                path.setAttribute('stroke-width', '2');
+
+                // Create text label
+                const labelAngle = (startAngle + endAngle) / 2;
+                const labelRadius = (innerRadius + outerRadius) / 2;
+                const labelX = centerX + labelRadius * Math.cos(labelAngle * Math.PI / 180);
+                const labelY = centerY + labelRadius * Math.sin(labelAngle * Math.PI / 180);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', labelX);
+                text.setAttribute('y', labelY);
+                text.setAttribute('class', 'slice-label');
+                text.setAttribute('transform', `rotate(${labelAngle + 90}, ${labelX}, ${labelY})`);
+                text.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+
+                // Create image placeholder
+                const imageSize = 60;
+                const imageRadius = outerRadius - 60;
+                const imageX = centerX + imageRadius * Math.cos(labelAngle * Math.PI / 180) - imageSize/2;
+                const imageY = centerY + imageRadius * Math.sin(labelAngle * Math.PI / 180) - imageSize/2;
+
+                const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                image.setAttribute('x', imageX);
+                image.setAttribute('y', imageY);
+                image.setAttribute('width', imageSize);
+                image.setAttribute('height', imageSize);
+                image.setAttribute('class', 'slice-image');
+                image.setAttribute('id', `image-${category}`);
+                image.style.display = 'none';
+
+                g.appendChild(path);
+                g.appendChild(text);
+                g.appendChild(image);
+                svg.appendChild(g);
+            });
+        }
+
+        // Create SVG slice path
+        function createSlice(cx, cy, innerRadius, outerRadius, startAngle, endAngle) {
+            const start = polarToCartesian(cx, cy, outerRadius, endAngle);
+            const end = polarToCartesian(cx, cy, outerRadius, startAngle);
+            const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+            const d = [
+                "M", start.x, start.y,
+                "A", outerRadius, outerRadius, 0, largeArcFlag, 0, end.x, end.y,
+                "L", cx + innerRadius * Math.cos(startAngle * Math.PI / 180), 
+                     cy + innerRadius * Math.sin(startAngle * Math.PI / 180),
+                "A", innerRadius, innerRadius, 0, largeArcFlag, 1,
+                     cx + innerRadius * Math.cos(endAngle * Math.PI / 180),
+                     cy + innerRadius * Math.sin(endAngle * Math.PI / 180),
+                "z"
+            ].join(" ");
+
+            return d;
+        }
+
+        function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+            const angleInRadians = (angleInDegrees) * Math.PI / 180.0;
+            return {
+                x: centerX + (radius * Math.cos(angleInRadians)),
+                y: centerY + (radius * Math.sin(angleInRadians))
+            };
+        }
+
+        // Initialize category toggles
+        function initializeCategoryToggles() {
+            const container = document.getElementById('categoryToggles');
+            const categories = Object.keys(productCatalog);
+
+            categories.forEach(category => {
+                const toggleItem = document.createElement('div');
+                toggleItem.className = 'toggle-item';
+                toggleItem.innerHTML = `
+                    <label>${category.charAt(0).toUpperCase() + category.slice(1)}</label>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                `;
+                container.appendChild(toggleItem);
+            });
+        }
+
+        // Toggle switch function
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+
+        // Open category modal
+        function openCategoryModal(category) {
+            currentCategory = category;
+            const modal = document.getElementById('modalOverlay');
+            const title = document.getElementById('modalTitle');
+            const grid = document.getElementById('productGrid');
+
+            title.textContent = `Select ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+            grid.innerHTML = '';
+
+            productCatalog[category].forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.onclick = () => selectProduct(category, product);
+                card.innerHTML = `
+                    <img src="${product.image_path}" alt="${product.name}">
+                    <h4>${product.name}</h4>
+                    <p>${product.brand}</p>
+                `;
+                grid.appendChild(card);
+            });
+
+            modal.style.display = 'block';
+        }
+
+        // Close modal
+        function closeModal(event) {
+            if (!event || event.target.id === 'modalOverlay') {
+                document.getElementById('modalOverlay').style.display = 'none';
+                document.getElementById('searchInput').value = '';
+            }
+        }
+
+        // Select product
+        function selectProduct(category, product) {
+            selectedItems[category] = product;
+            updateWheel(category, product);
+            updateSelectionPanel();
+            closeModal();
+        }
+
+        // Update wheel with selected item
+        function updateWheel(category, product) {
+            const image = document.getElementById(`image-${category}`);
+            image.setAttribute('href', product.image_path);
+            image.style.display = 'block';
+
+            // Mark slice as selected
+            const slices = document.querySelectorAll('.slice');
+            slices.forEach(slice => {
+                if (slice.getAttribute('data-category') === category) {
+                    slice.classList.add('selected');
+                }
+            });
+        }
+
+        // Update selection panel
+        function updateSelectionPanel() {
+            const instructions = document.getElementById('instructions');
+            const selectionPanel = document.getElementById('selectionPanel');
+            const selectionTable = document.getElementById('selectionTable');
+
+            if (Object.keys(selectedItems).length > 0) {
+                instructions.style.display = 'none';
+                selectionPanel.style.display = 'block';
+
+                selectionTable.innerHTML = '';
+                Object.entries(selectedItems).forEach(([category, product]) => {
+                    const item = document.createElement('div');
+                    item.className = 'selection-item';
+                    item.innerHTML = `
+                        <img src="${product.image_path}" alt="${product.name}">
+                        <div class="selection-info">
+                            <h4>${product.name}</h4>
+                            <p>${category.charAt(0).toUpperCase() + category.slice(1)} • ${product.brand}</p>
+                        </div>
+                        <button class="remove-btn" onclick="removeItem('${category}')">&times;</button>
+                    `;
+                    selectionTable.appendChild(item);
+                });
+            } else {
+                instructions.style.display = 'block';
+                selectionPanel.style.display = 'none';
+            }
+        }
+
+        // Remove item
+        function removeItem(category) {
+            delete selectedItems[category];
+            
+            // Remove image from wheel
+            const image = document.getElementById(`image-${category}`);
+            image.style.display = 'none';
+
+            // Remove selected class
+            const slices = document.querySelectorAll('.slice');
+            slices.forEach(slice => {
+                if (slice.getAttribute('data-category') === category) {
+                    slice.classList.remove('selected');
+                }
+            });
+
+            updateSelectionPanel();
+        }
+
+        // Filter products in modal
+        function filterProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.product-card');
+
+            cards.forEach(card => {
+                const productName = card.querySelector('h4').textContent.toLowerCase();
+                const brandName = card.querySelector('p').textContent.toLowerCase();
+
+                if (productName.includes(searchTerm) || brandName.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Mix outfit function
+        function mixOutfit() {
+            const button = document.getElementById('mixButton');
+            button.classList.add('spinning');
+
+            setTimeout(() => {
+                const categories = Object.keys(productCatalog);
+                const unselectedCategories = categories.filter(cat => !selectedItems[cat]);
+
+                // Randomly select items for unselected categories
+                unselectedCategories.forEach(category => {
+                    const products = productCatalog[category];
+                    const randomProduct = products[Math.floor(Math.random() * products.length)];
+                    selectProduct(category, randomProduct);
+                });
+
+                button.classList.remove('spinning');
+
+                // Show a subtle animation on newly added items
+                setTimeout(() => {
+                    const newItems = document.querySelectorAll('.selection-item');
+                    newItems.forEach((item, index) => {
+                        setTimeout(() => {
+                            item.style.animation = 'slideIn 0.4s ease-out';
+                        }, index * 100);
+                    });
+                }, 100);
+            }, 2000);
+        }
+
+        // Show preview
+        function showPreview() {
+            const selectionPanel = document.getElementById('selectionPanel');
+            const previewPanel = document.getElementById('previewPanel');
+            const previewGrid = document.getElementById('previewGrid');
+
+            previewGrid.innerHTML = '';
+            Object.entries(selectedItems).forEach(([category, product]) => {
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                item.innerHTML = `
+                    <img src="${product.image_path}" alt="${product.name}">
+                    <p>${category.charAt(0).toUpperCase() + category.slice(1)}</p>
+                `;
+                previewGrid.appendChild(item);
+            });
+
+            selectionPanel.style.display = 'none';
+            previewPanel.style.display = 'block';
+        }
+
+        // Hide preview
+        function hidePreview() {
+            const selectionPanel = document.getElementById('selectionPanel');
+            const previewPanel = document.getElementById('previewPanel');
+
+            previewPanel.style.display = 'none';
+            selectionPanel.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+- agent mode
+- opus 4.1 with max context window

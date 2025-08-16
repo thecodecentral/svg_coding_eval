@@ -1,0 +1,5118 @@
+# Designing the outfit mixer prototype
+_Exported on 8/12/2025 at 22:26:52 PDT from Cursor (1.4.2)_
+
+---
+
+**User**
+
+## The task
+
+You are asked to create an outfit mixer prototype for a fashion retailer. If the prototyping goes well, it will eventually get implemented on the fashion retailer's website. 
+
+Let's call this fashion retailer X and its website is example.com.
+
+## User Journey
+
+- As a customer, I visit example.com.
+- I have no idea what I am looking for, just want to browse around
+- I see this new gadget on the website called Outfit Mixer. It looks interesting, so I click on it.
+- At high level, I see 3 columns: 
+  - On the left there is some instructions for how to use this Outfit Mixer.
+  - In the middle is a UI that looks like a pizza, or perhaps resembles a color wheel. The wheel has multiple slices, and when I mouse over a slice, it pops out a little, kind of slick looking animation.
+  - On the right, there are some toggles such as gender, enable/disable certain slots, such as hats or accessories like sunglasses.
+- When I click on a slice on the pizza, I see a panel pops up. It allows me to filter products by categories. The category defaults to Tops. I can also type in a keyword to drill down the results.
+- As soon as I select an apparel, I see a table on the left column shows up, displaying the details about the selected apparel. The existing instructions disappear. I see a thumbnail, product name, and an option to remove the item from the table.
+- I see there's a Mix button in the middle of the pizza. I first select one or a few apparels, and click on the Mix button, the pizza spins, and "magically" the page recommends me apparels for the categories that I did not make an selection.
+- Once I have an outfit, I see there's a button in the left column that says "Preview". I click on it, the panel in the left column flips over and shows me a preview of the outfit.
+
+## Additional Requirements
+
+- You are given a blank workspace, with a `product_catalog.json` file and a `images` folder to work with.
+- Generate a single HTML file that contains all the code.
+- The design does not need to responsive, aim for a desktop UI.
+- Use SVG for the pizza UI.
+- Show the categories adjacent to the pies.
+- When a apparel is chosen, show a thumbnail on the pie.
+- The UI should be fun to use, ideally creates "wow" moments for the user.
+- The look and feel should resemble a modern high fashion retailer's website.
+- The categories of the entire catalog is defined in `product_catalog.json`.
+- The filters on the right columns are for display purposes only. They do need to be functional.
+
+## Caveats
+
+- Should we allow the user to enter the same category multiple times? If yes, how should the UI handle this?
+- How should we support the preview feature? For MVP, maybe just show all the thumbnails in a grid layout? Or you have a implementation that "wows" the user?
+
+## Artifact
+
+- A single HTML file name outfit-mixer.html
+
+---
+
+**Cursor**
+
+I’m going to scan the project to locate `product_catalog.json` and the `images` folder, and to check if an `outfit-mixer.html` already exists so I can update or create it in the correct place.
+
+I’m going to look for `product_catalog.json`, the `images` folder, and any existing `outfit-mixer.html` at the repository root so I can use the provided assets and avoid duplicating files.
+
+I'm going to open the `product_catalog.json` to understand the data structure (categories, fields, image paths) and ensure the UI and code uses correct keys and paths.
+
+I'll create the `outfit-mixer.html` at the repository root, loading `product_catalog.json` and `images` via relative paths. Then I'll implement the SVG pizza UI, selectors, mixing, and preview per your spec in a single self-contained file.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>X Outfit Mixer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f12;
+            --panel: #141418;
+            --muted: #8b8d93;
+            --text: #eef0f3;
+            --accent: #9b87f5;
+            --accent-2: #22d3ee;
+            --danger: #ef4444;
+            --ok: #10b981;
+            --gold: #c9ad6a;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 700px at 70% 20%, #191a20, var(--bg));
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+        .app-shell {
+            display: grid;
+            grid-template-columns: 360px 1fr 360px;
+            gap: 18px;
+            padding: 20px 22px;
+            height: 100vh;
+        }
+        .panel {
+            background: linear-gradient(180deg, #141418, #111116);
+            border: 1px solid #23232a;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03);
+            overflow: hidden;
+        }
+        .left-panel, .right-panel { display: flex; flex-direction: column; }
+        .panel-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #23232a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand { font-family: "Playfair Display", serif; letter-spacing: 0.3px; }
+        .brand strong { font-weight: 700; color: var(--gold); }
+        .muted { color: var(--muted); }
+        .instructions { padding: 18px; line-height: 1.5; color: #d5d7dc; }
+        .instructions h3 { margin: 0 0 10px 0; font-weight: 600; font-size: 18px; }
+        .instructions ol { margin: 8px 0 0 18px; padding: 0; }
+        .instructions li { margin: 8px 0; }
+
+        .selected-wrap { flex: 1; display: none; }
+        .selected-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .selected-table th, .selected-table td { padding: 10px 12px; border-bottom: 1px solid #24242b; }
+        .selected-table th { text-align: left; color: var(--muted); font-weight: 500; }
+        .thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid #2a2a31; }
+        .btn-remove { background: none; border: 1px solid #2a2a31; color: #f87171; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+        .left-actions { padding: 12px 16px; display: flex; gap: 10px; border-top: 1px solid #23232a; }
+        .btn { border: 0; background: #1b1b22; color: var(--text); border: 1px solid #2a2a31; padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: transform .12s ease, border-color .2s ease, background .2s; }
+        .btn:hover { transform: translateY(-1px); border-color: #363645; }
+        .btn-primary { background: linear-gradient(180deg, #6f6ef6, #5a59e6); border-color: #6a6aec; box-shadow: 0 6px 18px rgba(106,106,236,0.35); }
+        .btn-outline { background: transparent; }
+
+        .center-panel { position: relative; display: grid; place-items: center; }
+        .stage { position: relative; width: 720px; height: 720px; display: grid; place-items: center; }
+        .mix-btn {
+            position: absolute; width: 160px; height: 160px; border-radius: 50%;
+            background: radial-gradient(120px 120px at 40% 35%, #ffffff, #d7d5ff 40%, #7c77ff 60%, #4a47e6 85%);
+            border: 6px solid rgba(255,255,255,0.08);
+            box-shadow: 0 30px 60px rgba(88,82,255,0.45), inset 0 2px 10px rgba(255,255,255,0.35);
+            display: grid; place-items: center; color: #0c0d12; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+            cursor: pointer; user-select: none; z-index: 3; transition: transform .2s ease;
+        }
+        .mix-btn:active { transform: scale(0.98); }
+        .mix-glow { position: absolute; width: 420px; height: 420px; border-radius: 50%; filter: blur(40px); background: radial-gradient(closest-side, rgba(155,135,245,0.28), transparent 70%); z-index: 0; }
+
+        .wheel-wrap { position: relative; width: 640px; height: 640px; }
+        .wheel { width: 100%; height: 100%; }
+        .slice { transition: transform .18s ease, filter .2s ease, opacity .2s ease; cursor: pointer; }
+        .slice:hover { filter: brightness(1.05); }
+        .slice.disabled { opacity: 0.35; cursor: not-allowed; }
+        .slice.selected { filter: saturate(1.15) brightness(1.05); }
+        .wheel.spin { animation: spin 1.4s cubic-bezier(.2,.7,.1,1) both; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(520deg); } }
+
+        .label { font-size: 12px; fill: #d7d9df; text-shadow: 0 1px 0 #000; }
+        .badge {
+            font-size: 10px; fill: #0e0f14; paint-order: stroke; stroke: rgba(0,0,0,0.35); stroke-width: 6px;
+        }
+        .thumb-clip { pointer-events: none; }
+
+        .right-panel { padding-bottom: 10px; }
+        .toggle-group { padding: 14px 16px; border-bottom: 1px solid #23232a; }
+        .toggle { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
+        .switch { width: 50px; height: 28px; background: #22232b; border-radius: 20px; border: 1px solid #2a2a31; position: relative; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
+        .switch:before { content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #b9bcc6; transition: transform .2s ease; }
+        .switch.on { background: #2a2f46; border-color: #3c3f55; }
+        .switch.on:before { transform: translateX(22px); background: #a9b0ff; }
+
+        .filters-panel { position: absolute; right: 24px; top: 24px; width: 420px; max-height: 82vh; display: none; flex-direction: column; background: #141418; border: 1px solid #2a2a31; border-radius: 14px; overflow: hidden; z-index: 10; box-shadow: 0 30px 80px rgba(0,0,0,0.55); }
+        .filters-header { padding: 12px 14px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid #23232a; }
+        .filters-header select, .filters-header input { flex: 1; background: #0f0f14; border: 1px solid #2a2a31; color: var(--text); border-radius: 10px; padding: 10px 12px; }
+        .filters-grid { padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow: auto; }
+        .card { background: #0f0f14; border: 1px solid #2a2a31; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+        .card img { width: 100%; height: 120px; object-fit: cover; }
+        .card .meta { padding: 8px 10px; font-size: 12px; }
+        .card .meta .name { font-weight: 600; }
+        .card button { margin: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid #3a3a40; background: #1a1a22; color: var(--text); cursor: pointer; }
+
+        .flip { position: relative; flex: 1; perspective: 1200px; }
+        .flip-inner { position: absolute; inset: 0; transition: transform .8s cubic-bezier(.2,.7,.1,1); transform-style: preserve-3d; }
+        .flip.show-preview .flip-inner { transform: rotateY(180deg); }
+        .flip-face { position: absolute; inset: 0; backface-visibility: hidden; display: flex; flex-direction: column; }
+        .flip-face.back { transform: rotateY(180deg); }
+        .preview-grid { padding: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow: auto; }
+        .preview-grid img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid #2a2a31; }
+
+        .categories-legend { position: absolute; inset: 0; pointer-events: none; }
+        .legend-item { position: absolute; font-size: 12px; color: #cfd2d9; background: rgba(15,15,20,0.5); backdrop-filter: blur(4px); padding: 4px 8px; border: 1px solid #2a2a31; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -50%); }
+
+        .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(30px); background: #0f0f14; border: 1px solid #2a2a31; color: #dfe2ea; padding: 10px 14px; border-radius: 10px; opacity: 0; transition: all .3s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0px); }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="panel left-panel">
+            <div class="panel-header">
+                <div class="brand"><strong>X</strong> Outfit Mixer</div>
+                <div class="muted">example.com</div>
+            </div>
+            <div class="flip" id="leftFlip">
+                <div class="flip-inner">
+                    <div class="flip-face front">
+                        <div class="instructions" id="instructions">
+                            <h3>How to play</h3>
+                            <ol>
+                                <li>Hover around the wheel and click a slice to choose an item.</li>
+                                <li>Use the search and category filter to refine results.</li>
+                                <li>Pick a few, then hit Mix — we will complete the look for you.</li>
+                                <li>Preview your outfit when ready.</li>
+                            </ol>
+                        </div>
+                        <div class="selected-wrap" id="selectedWrap">
+                            <table class="selected-table" id="selectedTable">
+                                <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <div class="left-actions">
+                                <button class="btn btn-outline" id="btnClear">Clear</button>
+                                <button class="btn btn-primary" id="btnPreview">Preview</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flip-face back">
+                        <div class="panel-header" style="border-bottom: 1px solid #23232a;">
+                            <div class="brand">Outfit Preview</div>
+                            <button class="btn btn-outline" id="btnBack">Back</button>
+                        </div>
+                        <div class="preview-grid" id="previewGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel center-panel">
+            <div class="stage">
+                <div class="mix-glow"></div>
+                <div class="mix-btn" id="mixBtn">Mix</div>
+                <div class="wheel-wrap">
+                    <svg class="wheel" id="wheel" viewBox="-320 -320 640 640" aria-label="Outfit wheel"></svg>
+                    <div class="categories-legend" id="legend"></div>
+                </div>
+            </div>
+            <div class="filters-panel" id="filtersPanel">
+                <div class="filters-header">
+                    <select id="categorySelect"></select>
+                    <input id="searchInput" placeholder="Search keywords…" />
+                    <button class="btn" id="closeFilters">Close</button>
+                </div>
+                <div class="filters-grid" id="resultsGrid"></div>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="panel-header">
+                <div class="brand">Filters</div>
+            </div>
+            <div class="toggle-group">
+                <div class="toggle"><span class="muted">Gender: Female</span><div class="switch on" data-flag="genderF"></div></div>
+                <div class="toggle"><span class="muted">Gender: Male</span><div class="switch" data-flag="genderM"></div></div>
+                <div class="muted" style="font-size: 12px; margin-top: 6px;">Note: Gender toggles are for demo and do not filter items.</div>
+            </div>
+            <div class="toggle-group" id="slotsToggles">
+                <div class="muted" style="margin-bottom: 6px;">Enable/Disable slots</div>
+                <!-- Filled by JS -->
+            </div>
+            <div style="padding: 14px 16px;">
+                <button class="btn" id="btnOpenAny">Open Selector</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Mixed your outfit ✨</div>
+
+    <script>
+    const state = {
+        catalog: {},
+        categories: [],
+        keyToLabel: {
+            belts: 'Belts',
+            bottoms: 'Bottoms',
+            earrings: 'Earrings',
+            gloves: 'Gloves',
+            handbags: 'Handbags',
+            hats: 'Hats',
+            necklaces: 'Necklaces',
+            scaves: 'Scarves',
+            shoes: 'Shoes',
+            sunglasses: 'Sunglasses',
+            tops: 'Tops',
+            watches: 'Watches'
+        },
+        selectedByCategory: {},
+        disabledSlots: new Set(),
+        activeSlice: null
+    };
+
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    async function loadCatalog() {
+        const res = await fetch('product_catalog.json');
+        state.catalog = await res.json();
+        state.categories = Object.keys(state.catalog);
+        initUI();
+    }
+
+    function initUI() {
+        buildCategorySelect();
+        buildWheel();
+        buildLegend();
+        buildSlotToggles();
+        bindGlobalActions();
+    }
+
+    function buildCategorySelect() {
+        const sel = document.getElementById('categorySelect');
+        sel.innerHTML = '';
+        state.categories.forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k; opt.textContent = state.keyToLabel[k] || k;
+            sel.appendChild(opt);
+        });
+    }
+
+    function pol2cart(r, a) { return { x: r * Math.cos(a), y: r * Math.sin(a) }; }
+    function arcPath(cx, cy, r, start, end) {
+        const s = pol2cart(r, start); const e = pol2cart(r, end);
+        const large = end - start <= Math.PI ? 0 : 1;
+        return `M ${cx} ${cy} L ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y} Z`;
+    }
+
+    function buildWheel() {
+        const svg = document.getElementById('wheel');
+        svg.innerHTML = '';
+        const n = state.categories.length;
+        const radius = 300; const inner = 80;
+        const colors = [
+            '#8b5cf6','#22d3ee','#f472b6','#34d399','#f59e0b','#60a5fa','#c084fc','#4ade80','#f97316','#a78bfa','#2dd4bf','#ef4444'
+        ];
+
+        state.categories.forEach((cat, i) => {
+            const start = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const end = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
+            const mid = (start + end) / 2;
+            const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            grp.classList.add('slice');
+            grp.dataset.category = cat;
+
+            const pathOuter = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathOuter.setAttribute('d', arcPath(0, 0, radius, start, end));
+            pathOuter.setAttribute('fill', colors[i % colors.length]);
+            pathOuter.setAttribute('opacity', '0.9');
+
+            const pathInner = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathInner.setAttribute('d', arcPath(0, 0, inner, start, end));
+            pathInner.setAttribute('fill', '#0f0f14');
+
+            const thumbClipId = `clip-${cat}`;
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            clip.setAttribute('id', thumbClipId);
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const thumbCenter = pol2cart((radius + inner) / 2.2, mid);
+            circle.setAttribute('cx', thumbCenter.x);
+            circle.setAttribute('cy', thumbCenter.y);
+            circle.setAttribute('r', '42');
+            clip.appendChild(circle); defs.appendChild(clip);
+
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            img.setAttribute('x', thumbCenter.x - 45);
+            img.setAttribute('y', thumbCenter.y - 45);
+            img.setAttribute('width', '90');
+            img.setAttribute('height', '90');
+            img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            img.setAttribute('clip-path', `url(#${thumbClipId})`);
+            img.classList.add('thumb-clip');
+
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            const labelPos = pol2cart(radius + 22, mid);
+            label.setAttribute('x', labelPos.x);
+            label.setAttribute('y', labelPos.y);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('alignment-baseline', 'middle');
+            label.setAttribute('class', 'label');
+            label.textContent = state.keyToLabel[cat] || cat;
+
+            const badge = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            const badgePos = pol2cart(radius - 24, mid);
+            badge.setAttribute('x', badgePos.x);
+            badge.setAttribute('y', badgePos.y);
+            badge.setAttribute('text-anchor', 'middle');
+            badge.setAttribute('alignment-baseline', 'middle');
+            badge.setAttribute('class', 'badge');
+            badge.textContent = '＋';
+
+            grp.appendChild(defs);
+            grp.appendChild(pathOuter);
+            grp.appendChild(pathInner);
+            grp.appendChild(img);
+            grp.appendChild(label);
+            grp.appendChild(badge);
+
+            const pop = 10; const dx = Math.cos(mid) * pop; const dy = Math.sin(mid) * pop;
+            grp.addEventListener('mouseenter', () => {
+                if (state.disabledSlots.has(cat)) return;
+                grp.style.transform = `translate(${dx}px, ${dy}px)`;
+            });
+            grp.addEventListener('mouseleave', () => { grp.style.transform = 'translate(0, 0)'; });
+            grp.addEventListener('click', () => {
+                if (state.disabledSlots.has(cat)) return;
+                state.activeSlice = cat;
+                openSelector(cat);
+            });
+
+            svg.appendChild(grp);
+        });
+    }
+
+    function buildLegend() {
+        const legend = document.getElementById('legend');
+        legend.innerHTML = '';
+        const box = legend.parentElement.getBoundingClientRect();
+        const cx = box.width / 2; const cy = box.height / 2;
+        const n = state.categories.length; const radius = 330;
+        state.categories.forEach((cat, i) => {
+            const start = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const end = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
+            const mid = (start + end) / 2;
+            const p = pol2cart(radius, mid);
+            const div = document.createElement('div');
+            div.className = 'legend-item';
+            div.style.left = (cx + p.x) + 'px';
+            div.style.top = (cy + p.y) + 'px';
+            div.textContent = state.keyToLabel[cat] || cat;
+            legend.appendChild(div);
+        });
+    }
+
+    function buildSlotToggles() {
+        const wrap = document.getElementById('slotsToggles');
+        wrap.innerHTML = '';
+        state.categories.forEach(cat => {
+            const row = document.createElement('div'); row.className = 'toggle';
+            const label = document.createElement('span'); label.className = 'muted'; label.textContent = (state.keyToLabel[cat] || cat);
+            const sw = document.createElement('div'); sw.className = 'switch on';
+            sw.dataset.slot = cat; sw.addEventListener('click', () => toggleSlot(cat, sw));
+            row.appendChild(label); row.appendChild(sw); wrap.appendChild(row);
+        });
+    }
+
+    function toggleSlot(cat, el) {
+        const svg = document.getElementById('wheel');
+        const slice = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === cat);
+        const enabled = el.classList.toggle('on');
+        if (enabled) {
+            state.disabledSlots.delete(cat);
+            if (slice) slice.classList.remove('disabled');
+        } else {
+            state.disabledSlots.add(cat);
+            if (slice) slice.classList.add('disabled');
+        }
+    }
+
+    function bindGlobalActions() {
+        document.getElementById('btnOpenAny').addEventListener('click', () => {
+            const first = state.categories[0];
+            state.activeSlice = first;
+            openSelector(first);
+        });
+        document.getElementById('closeFilters').addEventListener('click', closeSelector);
+        document.getElementById('categorySelect').addEventListener('change', e => renderResults(e.target.value, document.getElementById('searchInput').value));
+        document.getElementById('searchInput').addEventListener('input', e => renderResults(document.getElementById('categorySelect').value, e.target.value));
+        document.getElementById('mixBtn').addEventListener('click', onMix);
+        document.getElementById('btnPreview').addEventListener('click', () => togglePreview(true));
+        document.getElementById('btnBack').addEventListener('click', () => togglePreview(false));
+        document.getElementById('btnClear').addEventListener('click', clearAll);
+        window.addEventListener('resize', buildLegend);
+    }
+
+    function openSelector(category) {
+        const panel = document.getElementById('filtersPanel');
+        const sel = document.getElementById('categorySelect');
+        sel.value = category || 'tops';
+        document.getElementById('searchInput').value = '';
+        renderResults(sel.value, '');
+        panel.style.display = 'flex';
+        panel.animate([ { transform: 'translateY(-10px)', opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 } ], { duration: 180, easing: 'ease-out' });
+    }
+    function closeSelector() {
+        const panel = document.getElementById('filtersPanel');
+        panel.animate([ { transform: 'translateY(0px)', opacity: 1 }, { transform: 'translateY(-10px)', opacity: 0 } ], { duration: 140, easing: 'ease-in' }).onfinish = () => {
+            panel.style.display = 'none';
+        };
+    }
+
+    function renderResults(category, keyword) {
+        const grid = document.getElementById('resultsGrid');
+        grid.innerHTML = '';
+        const list = state.catalog[category] || [];
+        const filtered = list.filter(it => !keyword || it.name.toLowerCase().includes(keyword.toLowerCase()) || it.brand.toLowerCase().includes(keyword.toLowerCase()));
+        filtered.forEach(item => {
+            const card = document.createElement('div'); card.className = 'card';
+            const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name;
+            const meta = document.createElement('div'); meta.className = 'meta';
+            const name = document.createElement('div'); name.className = 'name'; name.textContent = item.name;
+            const brand = document.createElement('div'); brand.className = 'muted'; brand.textContent = item.brand;
+            const btn = document.createElement('button'); btn.textContent = 'Select'; btn.addEventListener('click', () => selectItem(category, item));
+            meta.appendChild(name); meta.appendChild(brand);
+            card.appendChild(img); card.appendChild(meta); card.appendChild(btn);
+            grid.appendChild(card);
+        });
+    }
+
+    function selectItem(category, item) {
+        state.selectedByCategory[category] = item;
+        applySelectionToWheel(category, item);
+        renderSelectedTable();
+        closeSelector();
+        showSelectedUI();
+    }
+
+    function applySelectionToWheel(category, item) {
+        const svg = document.getElementById('wheel');
+        const grp = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === category);
+        if (grp) {
+            const img = grp.querySelector('image');
+            img.setAttribute('href', item.image_path);
+            grp.classList.add('selected');
+        }
+    }
+
+    function renderSelectedTable() {
+        const tbody = document.querySelector('#selectedTable tbody');
+        tbody.innerHTML = '';
+        Object.entries(state.selectedByCategory).forEach(([cat, item]) => {
+            if (!item) return;
+            const tr = document.createElement('tr');
+            const tdItem = document.createElement('td');
+            const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name; img.className = 'thumb';
+            const text = document.createElement('div'); text.textContent = item.name;
+            const box = document.createElement('div'); box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.gap = '10px';
+            box.appendChild(img); box.appendChild(text); tdItem.appendChild(box);
+
+            const tdCat = document.createElement('td'); tdCat.textContent = state.keyToLabel[cat] || cat;
+            const tdAct = document.createElement('td');
+            const btn = document.createElement('button'); btn.className = 'btn-remove'; btn.textContent = 'Remove'; btn.addEventListener('click', () => removeItem(cat));
+            tdAct.appendChild(btn);
+
+            tr.appendChild(tdItem); tr.appendChild(tdCat); tr.appendChild(tdAct);
+            tbody.appendChild(tr);
+        });
+    }
+
+    function removeItem(category) {
+        delete state.selectedByCategory[category];
+        const svg = document.getElementById('wheel');
+        const grp = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === category);
+        if (grp) {
+            const img = grp.querySelector('image');
+            img.removeAttribute('href');
+            grp.classList.remove('selected');
+        }
+        renderSelectedTable();
+        if (Object.keys(state.selectedByCategory).length === 0) hideSelectedUI();
+    }
+
+    function showSelectedUI() {
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('selectedWrap').style.display = 'block';
+    }
+    function hideSelectedUI() {
+        document.getElementById('instructions').style.display = 'block';
+        document.getElementById('selectedWrap').style.display = 'none';
+    }
+
+    function togglePreview(show) {
+        const flip = document.getElementById('leftFlip');
+        if (show) {
+            const grid = document.getElementById('previewGrid');
+            grid.innerHTML = '';
+            Object.values(state.selectedByCategory).forEach(item => {
+                if (!item) return;
+                const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name; grid.appendChild(img);
+            });
+            flip.classList.add('show-preview');
+        } else {
+            flip.classList.remove('show-preview');
+        }
+    }
+
+    function onMix() {
+        const wheel = document.getElementById('wheel');
+        wheel.classList.remove('spin'); // restart animation
+        // force reflow
+        void wheel.offsetWidth;
+        wheel.classList.add('spin');
+
+        // Fill remaining categories with random picks (skipping disabled)
+        state.categories.forEach(cat => {
+            if (state.disabledSlots.has(cat)) return;
+            if (!state.selectedByCategory[cat]) {
+                const list = state.catalog[cat] || [];
+                if (list.length) {
+                    const choice = pickRandom(list);
+                    state.selectedByCategory[cat] = choice;
+                    applySelectionToWheel(cat, choice);
+                }
+            }
+        });
+        renderSelectedTable();
+        showSelectedUI();
+        toast('Mixed your outfit ✨');
+    }
+
+    function clearAll() {
+        state.selectedByCategory = {};
+        const svg = document.getElementById('wheel');
+        svg.querySelectorAll('.slice').forEach(grp => {
+            grp.classList.remove('selected');
+            const img = grp.querySelector('image');
+            if (img) img.removeAttribute('href');
+        });
+        renderSelectedTable();
+        hideSelectedUI();
+    }
+
+    function toast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 1600);
+    }
+
+    loadCatalog();
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Outfit Mixer — X</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: rgba(255, 255, 255, 0.06);
+      --panel-strong: rgba(255, 255, 255, 0.12);
+      --text: #e9ecf1;
+      --muted: #a6adbb;
+      --accent-1: #6e52ff;
+      --accent-2: #ff7fd1;
+      --accent-3: #22d1ee;
+      --glow: 0 10px 30px rgba(110, 82, 255, 0.35), 0 0 80px rgba(255, 127, 209, 0.2);
+      --radius: 16px;
+      --shadow-1: 0 1px 0 rgba(255,255,255,0.08) inset,
+                  0 10px 30px rgba(0,0,0,0.35),
+                  0 20px 60px rgba(0,0,0,0.35);
+      --brand-gradient: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: radial-gradient(1200px 800px at 90% -10%, rgba(110,82,255,0.12), transparent),
+                  radial-gradient(1000px 700px at -20% 120%, rgba(34,209,238,0.10), transparent),
+                  var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      margin: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px clamp(16px, 4vw, 40px);
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(to bottom, rgba(11,13,16,0.8), rgba(11,13,16,0));
+      z-index: 20;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .brand-badge {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: conic-gradient(from 0deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+      box-shadow: var(--glow);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: clamp(16px, 3vw, 28px);
+      padding: 4px clamp(16px, 4vw, 40px) 40px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Left: selection summary */
+    .summary {
+      padding: 20px;
+      position: sticky;
+      top: 88px;
+      height: fit-content;
+      max-height: calc(100vh - 120px);
+      overflow: auto;
+    }
+    .summary h2 {
+      margin: 6px 0 14px;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+    .table thead th {
+      text-align: left;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 0 10px 8px;
+    }
+    .table tbody tr {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25) inset;
+    }
+    .table tbody td {
+      padding: 10px;
+      vertical-align: middle;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 0.8fr 60px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .chip .dot { width: 10px; height: 10px; border-radius: 999px; box-shadow: 0 0 0 2px rgba(255,255,255,0.15) inset; }
+    .chip-ghost { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+    .thumb {
+      width: 28px; height: 28px; border-radius: 8px; overflow: hidden; flex: none;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .row-actions {
+      display: flex; gap: 6px; justify-content: flex-end;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 8px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      cursor: pointer; transition: transform .12s ease, background .2s ease, border .2s ease, box-shadow .2s ease;
+      font-weight: 600; font-size: 12px; letter-spacing: .02em; text-transform: uppercase;
+    }
+    .btn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.1); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary {
+      background: var(--brand-gradient);
+      border: none;
+      box-shadow: var(--glow);
+    }
+    .btn-danger { background: rgba(239,68,68,0.16); border-color: rgba(239,68,68,0.5); }
+
+    .total {
+      margin-top: 16px; padding-top: 12px;
+      border-top: 1px dashed rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: space-between;
+      font-weight: 700; letter-spacing: 0.02em;
+    }
+
+    /* Right: wheel */
+    .studio { position: relative; }
+    .stage {
+      position: relative;
+      display: grid; place-items: center;
+      min-height: 620px;
+    }
+
+    .wheel-wrap {
+      position: relative;
+      width: min(80vw, 560px);
+      aspect-ratio: 1 / 1;
+    }
+
+    .wheel {
+      width: 100%; height: 100%;
+      filter: drop-shadow(0 14px 50px rgba(0,0,0,0.6));
+    }
+
+    .wheel-ring {
+      position: absolute; inset: -14px;
+      pointer-events: none;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(110,82,255,0.16), rgba(255,127,209,0.10), rgba(34,209,238,0.12), rgba(110,82,255,0.16));
+      filter: blur(10px) saturate(1.2);
+    }
+
+    .slice {
+      cursor: pointer;
+      transition: transform 200ms ease, filter 200ms ease;
+    }
+    .slice:hover { filter: brightness(1.1) saturate(1.1); }
+    .slice.selected path { stroke: rgba(255,255,255,0.8); stroke-width: 2; }
+
+    .slice-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; fill: var(--text);
+      opacity: 0.95;
+      paint-order: stroke; stroke: rgba(11,13,16,0.7); stroke-width: 5px; stroke-linejoin: round;
+    }
+
+    .center-ui { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+    .mix-btn {
+      pointer-events: auto;
+      width: clamp(110px, 20vw, 160px); aspect-ratio: 1 / 1; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(255,255,255,0.18), rgba(255,255,255,0.04)), var(--brand-gradient);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), var(--glow);
+      border: none; color: white; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+      font-size: clamp(14px, 2vw, 18px);
+      cursor: pointer; transition: transform .2s ease, box-shadow .3s ease, filter .2s ease;
+      position: relative; overflow: hidden;
+    }
+    .mix-btn::after {
+      content: ""; position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), transparent 45%);
+      filter: blur(10px);
+      mix-blend-mode: soft-light;
+    }
+    .mix-btn:hover { transform: translateY(-2px) scale(1.02); }
+    .mix-btn:active { transform: translateY(0) scale(0.98); }
+
+    .wheel-spinning { animation: spin 1200ms cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(720deg); } }
+
+    .thumb-icon {
+      pointer-events: none;
+      transform-box: fill-box; transform-origin: center;
+      filter: drop-shadow(0 4px 14px rgba(0,0,0,0.6));
+    }
+
+    /* Picker side panel */
+    .picker {
+      position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 92vw);
+      background: linear-gradient(180deg, rgba(10,12,15,0.9), rgba(10,12,15,0.82));
+      border-left: 1px solid rgba(255,255,255,0.1);
+      box-shadow: -40px 0 120px rgba(0,0,0,0.5);
+      transform: translateX(100%);
+      transition: transform 260ms cubic-bezier(.2,.8,.2,1);
+      z-index: 40;
+      display: grid; grid-template-rows: auto auto 1fr;
+      backdrop-filter: blur(10px);
+    }
+    .picker.open { transform: translateX(0); }
+    .picker-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 18px 8px; }
+    .picker-title { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+    .picker-sub { color: var(--muted); font-size: 12px; }
+    .picker-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .filter { padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-weight: 700; letter-spacing: 0.04em; font-size: 12px; }
+    .filter.active { background: rgba(110,82,255,0.25); border-color: rgba(110,82,255,0.8); box-shadow: 0 8px 30px rgba(110,82,255,0.3) inset; }
+    .picker-grid { padding: 16px; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid; grid-template-columns: 84px 1fr; gap: 12px; align-items: center;
+      transition: transform .15s ease, background .2s ease, border .2s ease, box-shadow .2s ease;
+      cursor: pointer;
+    }
+    .card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.08); box-shadow: 0 14px 40px rgba(0,0,0,0.35); }
+    .card .price { font-weight: 800; letter-spacing: 0.06em; }
+    .card .meta { color: var(--muted); font-size: 12px; }
+    .card .img { width: 84px; height: 84px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); }
+
+    .clear-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+
+    /* Category keys near wheel */
+    .keys { position: absolute; inset: 0; pointer-events: none; }
+    .key-label { position: absolute; transform: translate(-50%, -50%); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; text-shadow: 0 1px 0 rgba(0,0,0,0.4); }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+      .app { grid-template-columns: 1fr; }
+      .summary { position: static; max-height: none; }
+      .stage { min-height: 520px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-badge"></div>
+      <div>X — Outfit Mixer</div>
+    </div>
+    <div class="brand" style="gap:10px; opacity:.9">
+      <span style="font-weight:600; letter-spacing:.06em;">Find your look</span>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" fill="url(#g)"/><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6e52ff"/><stop offset="1" stop-color="#ff7fd1"/></linearGradient></defs></svg>
+    </div>
+  </header>
+
+  <main class="app">
+    <!-- Left: Selection Summary -->
+    <section class="panel summary" aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Your Selection</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Item</th>
+            <th>Price</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="summary-body">
+        </tbody>
+      </table>
+      <div class="total">
+        <div>Total</div>
+        <div id="total-price">$0</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn" id="clear-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Clear</button>
+        <button class="btn btn-primary" id="randomize-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21H3V17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21L10 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3H21V7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3L14 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Surprise Me</button>
+      </div>
+    </section>
+
+    <!-- Right: Wheel Studio -->
+    <section class="panel studio">
+      <div class="stage">
+        <div class="wheel-wrap">
+          <div class="wheel-ring"></div>
+          <svg id="wheel" class="wheel" viewBox="0 0 600 600" role="img" aria-label="Outfit Mixer Wheel">
+            <defs>
+              <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feOffset dx="0" dy="2"/>
+                <feGaussianBlur stdDeviation="6" result="offset-blur"/>
+                <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+                <feFlood flood-color="#000" flood-opacity="0.4" result="color"/>
+                <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+                <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+              </filter>
+            </defs>
+            <g id="slices"></g>
+            <g id="thumbs"></g>
+            <g id="labels"></g>
+          </svg>
+          <div class="keys" id="keys"></div>
+          <div class="center-ui">
+            <button id="mix-btn" class="mix-btn">Mix</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Picker Panel -->
+  <aside id="picker" class="picker" aria-hidden="true">
+    <div class="picker-header">
+      <div>
+        <div class="picker-title" id="picker-title">Choose Item</div>
+        <div class="picker-sub" id="picker-sub"></div>
+      </div>
+      <button class="btn" id="picker-close">Close</button>
+    </div>
+    <div class="picker-filters" id="picker-filters"></div>
+    <div class="picker-grid" id="picker-grid"></div>
+  </aside>
+
+  <script>
+    ;(() => {
+      const categories = [
+        { id: 'tops', label: 'Tops' },
+        { id: 'bottoms', label: 'Bottoms' },
+        { id: 'sunglasses', label: 'Sunglasses' },
+        { id: 'shoes', label: 'Shoes' },
+        { id: 'accessory1', label: 'Accessory I', isAccessory: true },
+        { id: 'accessory2', label: 'Accessory II', isAccessory: true },
+        { id: 'accessory3', label: 'Accessory III', isAccessory: true },
+      ]
+
+      const accessoryTypes = [
+        'Earrings','Necklaces','Ties','Gloves','Belts','Handbags','Watches'
+      ]
+
+      const palettes = ['Monochrome','Earth','Pastel','Vibrant','Neutral']
+
+      const wheelCfg = {
+        cx: 300, cy: 300, r: 260,
+      }
+
+      // UI toggles for label rendering
+      const uiCfg = {
+        showSliceLabels: true,           // SVG text on the ring
+        showExternalKeyLabels: false,    // HTML labels outside the ring
+      }
+
+      const state = {
+        catalog: buildCatalog(),
+        selected: {},
+        filter: null,
+        currentCategory: null,
+      }
+
+      // Utility
+      function currency(n) { return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n) }
+      function deg2rad(d) { return d * Math.PI / 180 }
+      function polar(cx, cy, r, angleDeg) {
+        const a = deg2rad(angleDeg)
+        return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }
+      }
+      function describeSector(cx, cy, r, a0, a1) {
+        const start = polar(cx, cy, r, a0)
+        const end = polar(cx, cy, r, a1)
+        const largeArc = (a1 - a0) % 360 > 180 ? 1 : 0
+        return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`
+      }
+
+      // Data
+      function buildCatalog() {
+        const items = {
+          tops: [
+            { name: 'Silk Blouse', palette: 'Neutral', color: '#e3ded8', price: 180 },
+            { name: 'Cropped Denim Jacket', palette: 'Vibrant', color: '#3172ff', price: 220 },
+            { name: 'Cashmere Turtleneck', palette: 'Monochrome', color: '#111111', price: 320 },
+            { name: 'Linen Shirt', palette: 'Earth', color: '#c2a678', price: 140 },
+            { name: 'Pastel Cardigan', palette: 'Pastel', color: '#ffc3d7', price: 160 },
+            { name: 'Satin Camisole', palette: 'Neutral', color: '#f4efe9', price: 130 },
+          ],
+          bottoms: [
+            { name: 'Tailored Trousers', palette: 'Monochrome', color: '#2a2a2a', price: 260 },
+            { name: 'High-Rise Jeans', palette: 'Vibrant', color: '#1b5fff', price: 190 },
+            { name: 'Pleated Skirt', palette: 'Pastel', color: '#c6e3ff', price: 210 },
+            { name: 'Linen Wide-Leg', palette: 'Earth', color: '#bfa37a', price: 200 },
+            { name: 'Silk Midi Skirt', palette: 'Neutral', color: '#ede7df', price: 280 },
+          ],
+          sunglasses: [
+            { name: 'Cat-Eye Frames', palette: 'Monochrome', color: '#222222', price: 150 },
+            { name: 'Aviator Gold', palette: 'Earth', color: '#caa46b', price: 220 },
+            { name: 'Translucent Pastel', palette: 'Pastel', color: '#ffd9f0', price: 160 },
+            { name: 'Neon Rimless', palette: 'Vibrant', color: '#ff3dbb', price: 180 },
+            { name: 'Matte Ivory', palette: 'Neutral', color: '#f1efe8', price: 170 },
+          ],
+          shoes: [
+            { name: 'Chelsea Boots', palette: 'Monochrome', color: '#111111', price: 380 },
+            { name: 'Loafers', palette: 'Neutral', color: '#e9e3da', price: 300 },
+            { name: 'Strappy Heels', palette: 'Vibrant', color: '#ff5a8a', price: 340 },
+            { name: 'Canvas Sneakers', palette: 'Pastel', color: '#b8e1ff', price: 180 },
+            { name: 'Suede Mules', palette: 'Earth', color: '#a27645', price: 260 },
+          ],
+          accessories: {
+            Earrings: [
+              { name: 'Pearl Studs', palette: 'Neutral', color: '#ffffff', price: 120 },
+              { name: 'Hoop Gold', palette: 'Earth', color: '#d1a96c', price: 180 },
+              { name: 'Prism Acrylic', palette: 'Vibrant', color: '#ff7fd1', price: 85 },
+            ],
+            Necklaces: [
+              { name: 'Herringbone Chain', palette: 'Earth', color: '#caa46b', price: 220 },
+              { name: 'Minimal Pendant', palette: 'Monochrome', color: '#1f1f1f', price: 140 },
+              { name: 'Candy Beads', palette: 'Pastel', color: '#ffd1e6', price: 95 },
+            ],
+            Ties: [
+              { name: 'Silk Charcoal', palette: 'Monochrome', color: '#222222', price: 110 },
+              { name: 'Rust Linen', palette: 'Earth', color: '#ad6e42', price: 80 },
+              { name: 'Electric Fuchsia', palette: 'Vibrant', color: '#ff2e9b', price: 90 },
+            ],
+            Gloves: [
+              { name: 'Nappa Leather', palette: 'Monochrome', color: '#121212', price: 210 },
+              { name: 'Knit Mittens', palette: 'Pastel', color: '#f6ccec', price: 60 },
+              { name: 'Camel Suede', palette: 'Earth', color: '#a87d4d', price: 150 },
+            ],
+            Belts: [
+              { name: 'Double Buckle', palette: 'Monochrome', color: '#262626', price: 130 },
+              { name: 'Braided Tan', palette: 'Earth', color: '#b8834f', price: 95 },
+              { name: 'Vanilla Leather', palette: 'Neutral', color: '#efe8db', price: 120 },
+            ],
+            Handbags: [
+              { name: 'Mini Top-Handle', palette: 'Neutral', color: '#efe9e1', price: 420 },
+              { name: 'Cobalt Crossbody', palette: 'Vibrant', color: '#246bff', price: 380 },
+              { name: 'Sage Shoulder Bag', palette: 'Pastel', color: '#b7e2c9', price: 360 },
+            ],
+            Watches: [
+              { name: 'Mesh Steel', palette: 'Monochrome', color: '#1c1c1c', price: 540 },
+              { name: 'Gold Classic', palette: 'Earth', color: '#d2b06e', price: 590 },
+              { name: 'Ivory Ceramic', palette: 'Neutral', color: '#f2ede4', price: 560 },
+            ]
+          }
+        }
+        return items
+      }
+
+      // Thumbnails as inline SVG dataURIs
+      const thumbCache = new Map()
+      function itemThumb(item) {
+        const key = item.name + '|' + item.color
+        if (thumbCache.has(key)) return thumbCache.get(key)
+        const letter = item.name.charAt(0)
+        const svg = encodeURIComponent(
+          `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'>`+
+          `<defs>`+
+          `<radialGradient id='g' cx='30%' cy='30%'>`+
+          `<stop offset='0%' stop-color='white' stop-opacity='.6'/>`+
+          `<stop offset='70%' stop-color='${item.color}' stop-opacity='1'/>`+
+          `<stop offset='100%' stop-color='${shade(item.color, -14)}' stop-opacity='1'/>`+
+          `</radialGradient>`+
+          `</defs>`+
+          `<rect x='0' y='0' width='120' height='120' rx='22' fill='url(#g)'/>`+
+          `<text x='50%' y='58%' text-anchor='middle' font-family='system-ui, -apple-system, Segoe UI, Roboto, Arial' font-size='54' font-weight='900' fill='rgba(0,0,0,0.6)'>${letter}</text>`+
+          `</svg>`
+        )
+        const uri = `data:image/svg+xml;utf8,${svg}`
+        thumbCache.set(key, uri)
+        return uri
+      }
+      function shade(hex, percent) {
+        hex = hex.replace('#','')
+        const num = parseInt(hex,16)
+        let r = (num>>16) + Math.round(255*percent/100)
+        let g = ((num>>8)&0x00FF) + Math.round(255*percent/100)
+        let b = (num&0x0000FF) + Math.round(255*percent/100)
+        r = Math.max(0, Math.min(255, r))
+        g = Math.max(0, Math.min(255, g))
+        b = Math.max(0, Math.min(255, b))
+        return '#' + (r<<16 | g<<8 | b).toString(16).padStart(6,'0')
+      }
+
+      // Wheel rendering
+      function renderWheel() {
+        const slicesG = document.getElementById('slices')
+        const labelsG = document.getElementById('labels')
+        const thumbsG = document.getElementById('thumbs')
+        const keysEl = document.getElementById('keys')
+        slicesG.innerHTML = ''
+        labelsG.innerHTML = ''
+        thumbsG.innerHTML = ''
+        if (uiCfg.showExternalKeyLabels) keysEl.innerHTML = ''
+
+        const N = categories.length
+        const step = 360 / N
+        const base = -90 // start at top
+
+        categories.forEach((cat, i) => {
+          const a0 = base + i * step
+          const a1 = base + (i+1) * step
+          const mid = (a0 + a1) / 2
+
+          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+          group.classList.add('slice')
+          group.dataset.id = cat.id
+          group.dataset.mid = String(mid)
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+          path.setAttribute('d', describeSector(wheelCfg.cx, wheelCfg.cy, wheelCfg.r, a0, a1))
+          path.setAttribute('fill', conicFill(i))
+          path.setAttribute('filter', 'url(#innerShadow)')
+          group.appendChild(path)
+
+          // Hover pop-out
+          group.addEventListener('mouseenter', () => {
+            const d = 12
+            const rad = deg2rad(mid)
+            group.style.transform = `translate(${Math.cos(rad)*d}px, ${Math.sin(rad)*d}px)`
+          })
+          group.addEventListener('mouseleave', () => {
+            group.style.transform = state.selected[cat.id] ? `translate(${Math.cos(deg2rad(mid))*6}px, ${Math.sin(deg2rad(mid))*6}px)` : ''
+          })
+
+          group.addEventListener('click', () => openPicker(cat))
+
+          slicesG.appendChild(group)
+
+          // Precompute an outer point for label/key placement
+          const outer = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r + 22, mid)
+
+          // Label on ring (SVG)
+          if (uiCfg.showSliceLabels) {
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+            label.classList.add('slice-label')
+            label.setAttribute('x', String(outer.x))
+            label.setAttribute('y', String(outer.y))
+            label.setAttribute('text-anchor', 'middle')
+            label.setAttribute('dominant-baseline', 'middle')
+            label.setAttribute('transform', `rotate(${mid}, ${outer.x}, ${outer.y}) rotate(${mid>90||mid<-90?180:0}, ${outer.x}, ${outer.y})`)
+            label.textContent = cat.label
+            labelsG.appendChild(label)
+          }
+
+          // External key labels (adjacent to pie)
+          if (uiCfg.showExternalKeyLabels) {
+            placeKeyLabel(cat, outer, mid)
+          }
+        })
+
+        updateSelectionVisuals()
+      }
+
+      function conicFill(i) {
+        // Alternating luxe gradient bands
+        const palette = ["#1a1c22","#151820","#13161c","#10131a"]
+        const a = palette[i % palette.length]
+        const b = shade(a, 12)
+        return `url(#grad-${i})`
+      }
+
+      // Build defs gradients dynamically (one per slice)
+      function ensureSliceGradients() {
+        const svg = document.getElementById('wheel')
+        let defs = svg.querySelector('defs#slice-defs')
+        if (!defs) {
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs')
+          defs.id = 'slice-defs'
+          svg.insertBefore(defs, svg.firstChild)
+        }
+        defs.innerHTML = ''
+        const N = categories.length
+        for (let i=0;i<N;i++) {
+          const id = `grad-${i}`
+          const lg = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient')
+          lg.id = id
+          lg.setAttribute('x1','0%'); lg.setAttribute('y1','0%'); lg.setAttribute('x2','100%'); lg.setAttribute('y2','100%')
+          const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+          const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+          const base = [
+            ['#1b2030', '#10131a'],
+            ['#161a25', '#0e1117'],
+            ['#15202a', '#0b1116'],
+            ['#1a1b27', '#0f1119'],
+          ][i % 4]
+          stop1.setAttribute('offset','0%'); stop1.setAttribute('stop-color', base[0])
+          stop2.setAttribute('offset','100%'); stop2.setAttribute('stop-color', base[1])
+          lg.appendChild(stop1); lg.appendChild(stop2)
+          defs.appendChild(lg)
+        }
+      }
+
+      function placeKeyLabel(cat, outerPoint, angle) {
+        const keys = document.getElementById('keys')
+        const wrap = document.createElement('div')
+        wrap.className = 'key-label'
+        const r = wheelCfg.r + 48
+        const pos = polar(wheelCfg.cx, wheelCfg.cy, r, angle)
+        // Convert SVG coords to absolute inside wheel-wrap
+        // wheel viewBox is 0..600, container is sized to element width
+        const wheel = document.getElementById('wheel')
+        const bbox = wheel.getBoundingClientRect()
+        // Using percentages within keys container
+        const pctX = (pos.x / 600) * 100
+        const pctY = (pos.y / 600) * 100
+        wrap.style.left = pctX + '%'
+        wrap.style.top = pctY + '%'
+        wrap.textContent = cat.label
+        keys.appendChild(wrap)
+      }
+
+      function updateSelectionVisuals() {
+        const slices = Array.from(document.querySelectorAll('#slices .slice'))
+        const thumbsG = document.getElementById('thumbs')
+        thumbsG.innerHTML = ''
+
+        slices.forEach(g => {
+          const id = g.dataset.id
+          const mid = parseFloat(g.dataset.mid || '0')
+          if (state.selected[id]) {
+            g.classList.add('selected')
+            const d = 6
+            const rad = deg2rad(mid)
+            g.style.transform = `translate(${Math.cos(rad)*d}px, ${Math.sin(rad)*d}px)`
+
+            const pos = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r*0.62, mid)
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+            img.setAttribute('href', itemThumb(state.selected[id].item))
+            img.setAttribute('x', String(pos.x - 34))
+            img.setAttribute('y', String(pos.y - 34))
+            img.setAttribute('width', '68')
+            img.setAttribute('height', '68')
+            img.setAttribute('clip-path', 'circle(50% at 50% 50%)')
+            img.setAttribute('class', 'thumb-icon')
+            thumbsG.appendChild(img)
+          } else {
+            g.classList.remove('selected')
+            g.style.transform = ''
+          }
+        })
+      }
+
+      // Picker logic
+      const pickerEl = document.getElementById('picker')
+      const pickerTitle = document.getElementById('picker-title')
+      const pickerSub = document.getElementById('picker-sub')
+      const pickerFilters = document.getElementById('picker-filters')
+      const pickerGrid = document.getElementById('picker-grid')
+      document.getElementById('picker-close').addEventListener('click', () => closePicker())
+
+      function openPicker(cat) {
+        state.currentCategory = cat
+        pickerTitle.textContent = `Choose ${cat.label}`
+        pickerSub.textContent = cat.isAccessory ? 'Pick an accessory type, then an item' : 'Pick one item to add to your look'
+        pickerFilters.innerHTML = ''
+
+        let items = []
+        if (cat.isAccessory) {
+          // accessory type chips
+          accessoryTypes.forEach((t, idx) => {
+            const chip = document.createElement('button')
+            chip.className = 'filter' + (idx===0 ? ' active' : '')
+            chip.textContent = t
+            chip.addEventListener('click', () => {
+              Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+              chip.classList.add('active')
+              renderPickerGrid(cat, t)
+            })
+            pickerFilters.appendChild(chip)
+          })
+          renderPickerGrid(cat, accessoryTypes[0])
+        } else {
+          // palette filter chips
+          const allChip = document.createElement('button')
+          allChip.className = 'filter active'
+          allChip.textContent = 'All Palettes'
+          allChip.addEventListener('click', () => {
+            Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+            allChip.classList.add('active')
+            state.filter = null
+            renderPickerGrid(cat)
+          })
+          pickerFilters.appendChild(allChip)
+          palettes.forEach(p => {
+            const chip = document.createElement('button')
+            chip.className = 'filter'
+            chip.textContent = p
+            chip.addEventListener('click', () => {
+              Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+              chip.classList.add('active')
+              state.filter = p
+              renderPickerGrid(cat)
+            })
+            pickerFilters.appendChild(chip)
+          })
+          renderPickerGrid(cat)
+        }
+
+        pickerEl.classList.add('open')
+        pickerEl.setAttribute('aria-hidden','false')
+      }
+
+      function renderPickerGrid(cat, accessoryType) {
+        pickerGrid.innerHTML = ''
+        let list = []
+        if (cat.isAccessory) {
+          list = state.catalog.accessories[accessoryType] || []
+        } else {
+          list = state.catalog[cat.id] || []
+          if (state.filter) list = list.filter(it => it.palette === state.filter)
+        }
+        list.forEach(item => {
+          const card = document.createElement('div')
+          card.className = 'card'
+          card.addEventListener('click', () => {
+            selectItem(cat, item, accessoryType)
+            closePicker()
+          })
+          const img = document.createElement('div')
+          img.className = 'img'
+          img.style.backgroundImage = `url(${itemThumb(item)})`
+          img.style.backgroundSize = 'cover'
+          img.style.backgroundPosition = 'center'
+          const info = document.createElement('div')
+          const title = document.createElement('div')
+          title.style.fontWeight = '800'
+          title.style.letterSpacing = '0.02em'
+          title.textContent = item.name
+          const meta = document.createElement('div')
+          meta.className = 'meta'
+          meta.textContent = `${item.palette} • ${accessoryType ? accessoryType : cat.label}`
+          const price = document.createElement('div')
+          price.className = 'price'
+          price.textContent = currency(item.price)
+          info.appendChild(title)
+          info.appendChild(meta)
+          info.appendChild(price)
+          card.appendChild(img)
+          card.appendChild(info)
+          pickerGrid.appendChild(card)
+        })
+      }
+
+      function closePicker() {
+        pickerEl.classList.remove('open')
+        pickerEl.setAttribute('aria-hidden','true')
+        state.filter = null
+      }
+
+      function selectItem(cat, item, accessoryType) {
+        state.selected[cat.id] = { item, type: cat.isAccessory ? (accessoryType || 'Accessory') : null }
+        renderSummary()
+        updateSelectionVisuals()
+      }
+
+      function clearItem(catId) {
+        delete state.selected[catId]
+        renderSummary()
+        updateSelectionVisuals()
+      }
+
+      // Summary table
+      function renderSummary() {
+        const body = document.getElementById('summary-body')
+        body.innerHTML = ''
+        let total = 0
+
+        categories.forEach(cat => {
+          const row = document.createElement('tr')
+          const td = (n=1)=>{const e=document.createElement('td'); e.colSpan=n; return e}
+
+          // Col 1: Category
+          const c1 = td()
+          c1.innerHTML = `<span class="chip chip-ghost">${cat.label}</span>`
+
+          // Col 2: Item or Add CTA
+          const c2 = td()
+          if (state.selected[cat.id]) {
+            const sel = state.selected[cat.id]
+            const wrap = document.createElement('div')
+            wrap.style.display = 'flex'
+            wrap.style.alignItems = 'center'
+            wrap.style.gap = '10px'
+            const th = document.createElement('div')
+            th.className = 'thumb'
+            th.style.backgroundImage = `url(${itemThumb(sel.item)})`
+            th.style.backgroundSize = 'cover'
+            const name = document.createElement('div')
+            name.style.fontWeight = '700'
+            name.textContent = sel.item.name
+            const meta = document.createElement('div')
+            meta.className = 'chip'
+            meta.innerHTML = `<span class="dot" style="background:${sel.item.color}"></span>${sel.item.palette}${sel.type ? ' • '+sel.type : ''}`
+            wrap.appendChild(th)
+            const inner = document.createElement('div')
+            inner.appendChild(name)
+            inner.appendChild(meta)
+            c2.appendChild(wrap)
+            wrap.appendChild(inner)
+          } else {
+            const add = document.createElement('button')
+            add.className = 'btn'
+            add.textContent = 'Add…'
+            add.addEventListener('click', () => openPicker(cat))
+            c2.appendChild(add)
+          }
+
+          // Col 3: Price
+          const c3 = td()
+          if (state.selected[cat.id]) {
+            const p = state.selected[cat.id].item.price
+            total += p
+            c3.textContent = currency(p)
+          } else {
+            c3.innerHTML = '<span style="color:var(--muted)">—</span>'
+          }
+
+          // Col 4: Actions
+          const c4 = td()
+          const actionWrap = document.createElement('div')
+          actionWrap.className = 'row-actions'
+          const chooseBtn = document.createElement('button')
+          chooseBtn.className = 'btn'
+          chooseBtn.textContent = 'Choose'
+          chooseBtn.addEventListener('click', () => openPicker(cat))
+          actionWrap.appendChild(chooseBtn)
+          if (state.selected[cat.id]) {
+            const clearBtn = document.createElement('button')
+            clearBtn.className = 'btn btn-danger'
+            clearBtn.textContent = 'Remove'
+            clearBtn.addEventListener('click', () => clearItem(cat.id))
+            actionWrap.appendChild(clearBtn)
+          }
+          c4.appendChild(actionWrap)
+
+          // Assemble
+          const wrapper = document.createElement('td')
+          wrapper.colSpan = 4
+          const rowDiv = document.createElement('div')
+          rowDiv.className = 'row'
+          rowDiv.appendChild(c1)
+          rowDiv.appendChild(c2)
+          rowDiv.appendChild(c3)
+          rowDiv.appendChild(c4)
+          wrapper.appendChild(rowDiv)
+          row.appendChild(wrapper)
+          body.appendChild(row)
+        })
+
+        document.getElementById('total-price').textContent = currency(total)
+      }
+
+      // Mix logic
+      function computeDominantPalette() {
+        const counts = new Map()
+        Object.values(state.selected).forEach(({item}) => {
+          counts.set(item.palette, (counts.get(item.palette)||0)+1)
+        })
+        let best = null, max = 0
+        counts.forEach((v, k) => { if (v>max) { max=v; best=k } })
+        return best // can be null
+      }
+
+      function pickItemForCategory(cat, preferPalette, accessoryType) {
+        let pool = []
+        if (cat.isAccessory) {
+          const types = accessoryType ? [accessoryType] : accessoryTypes
+          types.forEach(t => { pool = pool.concat(state.catalog.accessories[t]) })
+        } else {
+          pool = state.catalog[cat.id]
+        }
+        if (preferPalette) {
+          const filtered = pool.filter(it => it.palette === preferPalette)
+          if (filtered.length) pool = filtered
+        }
+        return pool[Math.floor(Math.random()*pool.length)]
+      }
+
+      function spinWheelOnce() {
+        const wheelEl = document.querySelector('.wheel-wrap')
+        wheelEl.classList.add('wheel-spinning')
+        return new Promise(res => setTimeout(() => {
+          wheelEl.classList.remove('wheel-spinning'); res()
+        }, 1200))
+      }
+
+      async function mixFill() {
+        const prefer = computeDominantPalette() || palettes[Math.floor(Math.random()*palettes.length)]
+        // randomly assign accessory types for empty accessory slots
+        const shuffledTypes = accessoryTypes.slice().sort(()=>Math.random()-0.5)
+        let tIdx = 0
+        for (const cat of categories) {
+          if (!state.selected[cat.id]) {
+            const type = cat.isAccessory ? shuffledTypes[tIdx++ % shuffledTypes.length] : null
+            const item = pickItemForCategory(cat, prefer, type)
+            state.selected[cat.id] = { item, type }
+          }
+        }
+        renderSummary(); updateSelectionVisuals()
+      }
+
+      // Events
+      document.getElementById('mix-btn').addEventListener('click', async () => {
+        await spinWheelOnce()
+        await mixFill()
+        confettiBurst()
+      })
+
+      document.getElementById('randomize-all').addEventListener('click', async () => {
+        state.selected = {}
+        renderSummary(); updateSelectionVisuals()
+        await spinWheelOnce()
+        await mixFill()
+        confettiBurst()
+      })
+
+      document.getElementById('clear-all').addEventListener('click', () => {
+        state.selected = {}
+        renderSummary(); updateSelectionVisuals()
+      })
+
+      // Confetti
+      function confettiBurst() {
+        const container = document.querySelector('.stage')
+        const burst = document.createElement('div')
+        burst.style.position = 'absolute'
+        burst.style.inset = 0
+        burst.style.pointerEvents = 'none'
+        container.appendChild(burst)
+        const colors = ['#6e52ff','#ff7fd1','#22d1ee','#f9f871','#7cf1be']
+        for (let i=0;i<24;i++) {
+          const p = document.createElement('div')
+          const size = 6 + Math.random()*8
+          p.style.position = 'absolute'
+          p.style.left = '50%'; p.style.top = '50%'
+          p.style.width = size+'px'; p.style.height = size+'px'
+          p.style.background = colors[i%colors.length]
+          p.style.borderRadius = Math.random()>.5 ? '2px' : '999px'
+          p.style.transform = `translate(-50%,-50%) rotate(${Math.random()*360}deg)`
+          p.style.filter = 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))'
+          burst.appendChild(p)
+          const dx = (Math.random()-.5) * 320
+          const dy = (Math.random()-.5) * 240
+          const rot = (Math.random()-.5) * 720
+          p.animate([
+            { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`, opacity: 0 }
+          ], { duration: 900 + Math.random()*500, easing: 'cubic-bezier(.15,.8,.2,1)', fill: 'forwards' })
+        }
+        setTimeout(()=>burst.remove(), 1600)
+      }
+
+      // Init
+      ensureSliceGradients()
+      renderWheel()
+      renderSummary()
+
+      // Recompute key labels on resize only if external keys are enabled
+      window.addEventListener('resize', () => {
+        if (!uiCfg.showExternalKeyLabels) return
+        const keys = document.getElementById('keys')
+        keys.innerHTML = ''
+        const N = categories.length
+        const step = 360 / N
+        const base = -90
+        categories.forEach((cat, i) => {
+          const a0 = base + i * step
+          const a1 = base + (i+1) * step
+          const mid = (a0 + a1) / 2
+          const pos = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r + 22, mid)
+          placeKeyLabel(cat, pos, mid)
+        })
+      })
+
+    })()
+  </script>
+</body>
+</html>
+
+```
+
+- I located the assets at `/data/projects/svg_coding_eval/product_catalog.json` and `/data/projects/svg_coding_eval/images/`.
+- I created a single-file prototype at `/data/projects/svg_coding_eval/outfit-mixer.html` implementing the SVG wheel, selectors, mixing, slot toggles, table of selections, and a flip-to-preview.
+
+How to run
+- Open `outfit-mixer.html` in a local web server so the JSON can be fetched, e.g.:
+  - Python: `python3 -m http.server` in `/data/projects/svg_coding_eval`, then visit `http://localhost:8000/outfit-mixer.html`
+  - Node: `npx serve -s /data/projects/svg_coding_eval`
+- Or use the repository’s preview if available.
+
+What’s included
+- SVG “pizza” wheel: hover pops the slice, click opens selector.
+- Categories labeled adjacent to the wheel.
+- Clicking a slice opens a filter panel with category dropdown and keyword search.
+- Selecting an item shows a thumbnail on the corresponding slice.
+- Left panel auto-switches from instructions to a details table (thumbnail, name, category, remove).
+- Mix button spins the wheel and fills remaining enabled categories with recommendations.
+- Right panel has:
+  - Gender toggles (demo-only, non-filtering per spec note).
+  - Slot toggles to enable/disable specific categories (these are functional and affect mixing/selection).
+- Preview button flips the left panel to a thumbnail grid of the outfit; Back returns.
+
+Notes on caveats
+- Same category multiple times: MVP enforces one item per category. To allow multiples later, we can add sub-slices or stacked badges within a slice and expand the left table to list multiples per category.
+- Preview MVP: implemented as a card grid with a 3D flip for a “wow” moment. We can enhance with a mannequin or layered collage if desired.
+
+- Created `outfit-mixer.html` at `/data/projects/svg_coding_eval/`.
+- Reads `product_catalog.json`, uses thumbnails on slices, spin animation on Mix, functional slot toggles, and a flip-to-preview panel.
+
+---
+
+**User**
+
+I see no pies 
+
+---
+
+**Cursor**
+
+I’m going to update the HTML so it fetches the catalog using an absolute path fallback and shows a helpful message if it can’t load, which should make the wheel render reliably regardless of where the file is opened from.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>X Outfit Mixer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f12;
+            --panel: #141418;
+            --muted: #8b8d93;
+            --text: #eef0f3;
+            --accent: #9b87f5;
+            --accent-2: #22d3ee;
+            --danger: #ef4444;
+            --ok: #10b981;
+            --gold: #c9ad6a;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 700px at 70% 20%, #191a20, var(--bg));
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+        .app-shell {
+            display: grid;
+            grid-template-columns: 360px 1fr 360px;
+            gap: 18px;
+            padding: 20px 22px;
+            height: 100vh;
+        }
+        .panel {
+            background: linear-gradient(180deg, #141418, #111116);
+            border: 1px solid #23232a;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03);
+            overflow: hidden;
+        }
+        .left-panel, .right-panel { display: flex; flex-direction: column; }
+        .panel-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #23232a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand { font-family: "Playfair Display", serif; letter-spacing: 0.3px; }
+        .brand strong { font-weight: 700; color: var(--gold); }
+        .muted { color: var(--muted); }
+        .instructions { padding: 18px; line-height: 1.5; color: #d5d7dc; }
+        .instructions h3 { margin: 0 0 10px 0; font-weight: 600; font-size: 18px; }
+        .instructions ol { margin: 8px 0 0 18px; padding: 0; }
+        .instructions li { margin: 8px 0; }
+
+        .selected-wrap { flex: 1; display: none; }
+        .selected-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .selected-table th, .selected-table td { padding: 10px 12px; border-bottom: 1px solid #24242b; }
+        .selected-table th { text-align: left; color: var(--muted); font-weight: 500; }
+        .thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid #2a2a31; }
+        .btn-remove { background: none; border: 1px solid #2a2a31; color: #f87171; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+        .left-actions { padding: 12px 16px; display: flex; gap: 10px; border-top: 1px solid #23232a; }
+        .btn { border: 0; background: #1b1b22; color: var(--text); border: 1px solid #2a2a31; padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: transform .12s ease, border-color .2s ease, background .2s; }
+        .btn:hover { transform: translateY(-1px); border-color: #363645; }
+        .btn-primary { background: linear-gradient(180deg, #6f6ef6, #5a59e6); border-color: #6a6aec; box-shadow: 0 6px 18px rgba(106,106,236,0.35); }
+        .btn-outline { background: transparent; }
+
+        .center-panel { position: relative; display: grid; place-items: center; }
+        .stage { position: relative; width: 720px; height: 720px; display: grid; place-items: center; }
+        .mix-btn {
+            position: absolute; width: 160px; height: 160px; border-radius: 50%;
+            background: radial-gradient(120px 120px at 40% 35%, #ffffff, #d7d5ff 40%, #7c77ff 60%, #4a47e6 85%);
+            border: 6px solid rgba(255,255,255,0.08);
+            box-shadow: 0 30px 60px rgba(88,82,255,0.45), inset 0 2px 10px rgba(255,255,255,0.35);
+            display: grid; place-items: center; color: #0c0d12; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+            cursor: pointer; user-select: none; z-index: 3; transition: transform .2s ease;
+        }
+        .mix-btn:active { transform: scale(0.98); }
+        .mix-glow { position: absolute; width: 420px; height: 420px; border-radius: 50%; filter: blur(40px); background: radial-gradient(closest-side, rgba(155,135,245,0.28), transparent 70%); z-index: 0; }
+
+        .wheel-wrap { position: relative; width: 640px; height: 640px; }
+        .wheel { width: 100%; height: 100%; }
+        .slice { transition: transform .18s ease, filter .2s ease, opacity .2s ease; cursor: pointer; }
+        .slice:hover { filter: brightness(1.05); }
+        .slice.disabled { opacity: 0.35; cursor: not-allowed; }
+        .slice.selected { filter: saturate(1.15) brightness(1.05); }
+        .wheel.spin { animation: spin 1.4s cubic-bezier(.2,.7,.1,1) both; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(520deg); } }
+
+        .label { font-size: 12px; fill: #d7d9df; text-shadow: 0 1px 0 #000; }
+        .badge {
+            font-size: 10px; fill: #0e0f14; paint-order: stroke; stroke: rgba(0,0,0,0.35); stroke-width: 6px;
+        }
+        .thumb-clip { pointer-events: none; }
+
+        .right-panel { padding-bottom: 10px; }
+        .toggle-group { padding: 14px 16px; border-bottom: 1px solid #23232a; }
+        .toggle { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
+        .switch { width: 50px; height: 28px; background: #22232b; border-radius: 20px; border: 1px solid #2a2a31; position: relative; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
+        .switch:before { content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #b9bcc6; transition: transform .2s ease; }
+        .switch.on { background: #2a2f46; border-color: #3c3f55; }
+        .switch.on:before { transform: translateX(22px); background: #a9b0ff; }
+
+        .filters-panel { position: absolute; right: 24px; top: 24px; width: 420px; max-height: 82vh; display: none; flex-direction: column; background: #141418; border: 1px solid #2a2a31; border-radius: 14px; overflow: hidden; z-index: 10; box-shadow: 0 30px 80px rgba(0,0,0,0.55); }
+        .filters-header { padding: 12px 14px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid #23232a; }
+        .filters-header select, .filters-header input { flex: 1; background: #0f0f14; border: 1px solid #2a2a31; color: var(--text); border-radius: 10px; padding: 10px 12px; }
+        .filters-grid { padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow: auto; }
+        .card { background: #0f0f14; border: 1px solid #2a2a31; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+        .card img { width: 100%; height: 120px; object-fit: cover; }
+        .card .meta { padding: 8px 10px; font-size: 12px; }
+        .card .meta .name { font-weight: 600; }
+        .card button { margin: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid #3a3a40; background: #1a1a22; color: var(--text); cursor: pointer; }
+
+        .flip { position: relative; flex: 1; perspective: 1200px; }
+        .flip-inner { position: absolute; inset: 0; transition: transform .8s cubic-bezier(.2,.7,.1,1); transform-style: preserve-3d; }
+        .flip.show-preview .flip-inner { transform: rotateY(180deg); }
+        .flip-face { position: absolute; inset: 0; backface-visibility: hidden; display: flex; flex-direction: column; }
+        .flip-face.back { transform: rotateY(180deg); }
+        .preview-grid { padding: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow: auto; }
+        .preview-grid img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid #2a2a31; }
+
+        .categories-legend { position: absolute; inset: 0; pointer-events: none; }
+        .legend-item { position: absolute; font-size: 12px; color: #cfd2d9; background: rgba(15,15,20,0.5); backdrop-filter: blur(4px); padding: 4px 8px; border: 1px solid #2a2a31; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -50%); }
+
+        .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(30px); background: #0f0f14; border: 1px solid #2a2a31; color: #dfe2ea; padding: 10px 14px; border-radius: 10px; opacity: 0; transition: all .3s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0px); }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="panel left-panel">
+            <div class="panel-header">
+                <div class="brand"><strong>X</strong> Outfit Mixer</div>
+                <div class="muted">example.com</div>
+            </div>
+            <div class="flip" id="leftFlip">
+                <div class="flip-inner">
+                    <div class="flip-face front">
+                        <div class="instructions" id="instructions">
+                            <h3>How to play</h3>
+                            <ol>
+                                <li>Hover around the wheel and click a slice to choose an item.</li>
+                                <li>Use the search and category filter to refine results.</li>
+                                <li>Pick a few, then hit Mix — we will complete the look for you.</li>
+                                <li>Preview your outfit when ready.</li>
+                            </ol>
+                        </div>
+                        <div class="selected-wrap" id="selectedWrap">
+                            <table class="selected-table" id="selectedTable">
+                                <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <div class="left-actions">
+                                <button class="btn btn-outline" id="btnClear">Clear</button>
+                                <button class="btn btn-primary" id="btnPreview">Preview</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flip-face back">
+                        <div class="panel-header" style="border-bottom: 1px solid #23232a;">
+                            <div class="brand">Outfit Preview</div>
+                            <button class="btn btn-outline" id="btnBack">Back</button>
+                        </div>
+                        <div class="preview-grid" id="previewGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel center-panel">
+            <div class="stage">
+                <div class="mix-glow"></div>
+                <div class="mix-btn" id="mixBtn">Mix</div>
+                <div class="wheel-wrap">
+                    <svg class="wheel" id="wheel" viewBox="-320 -320 640 640" aria-label="Outfit wheel"></svg>
+                    <div class="categories-legend" id="legend"></div>
+                </div>
+            </div>
+            <div class="filters-panel" id="filtersPanel">
+                <div class="filters-header">
+                    <select id="categorySelect"></select>
+                    <input id="searchInput" placeholder="Search keywords…" />
+                    <button class="btn" id="closeFilters">Close</button>
+                </div>
+                <div class="filters-grid" id="resultsGrid"></div>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="panel-header">
+                <div class="brand">Filters</div>
+            </div>
+            <div class="toggle-group">
+                <div class="toggle"><span class="muted">Gender: Female</span><div class="switch on" data-flag="genderF"></div></div>
+                <div class="toggle"><span class="muted">Gender: Male</span><div class="switch" data-flag="genderM"></div></div>
+                <div class="muted" style="font-size: 12px; margin-top: 6px;">Note: Gender toggles are for demo and do not filter items.</div>
+            </div>
+            <div class="toggle-group" id="slotsToggles">
+                <div class="muted" style="margin-bottom: 6px;">Enable/Disable slots</div>
+                <!-- Filled by JS -->
+            </div>
+            <div style="padding: 14px 16px;">
+                <button class="btn" id="btnOpenAny">Open Selector</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Mixed your outfit ✨</div>
+
+    <script>
+    const state = {
+        catalog: {},
+        categories: [],
+        keyToLabel: {
+            belts: 'Belts',
+            bottoms: 'Bottoms',
+            earrings: 'Earrings',
+            gloves: 'Gloves',
+            handbags: 'Handbags',
+            hats: 'Hats',
+            necklaces: 'Necklaces',
+            scaves: 'Scarves',
+            shoes: 'Shoes',
+            sunglasses: 'Sunglasses',
+            tops: 'Tops',
+            watches: 'Watches'
+        },
+        selectedByCategory: {},
+        disabledSlots: new Set(),
+        activeSlice: null
+    };
+
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    async function loadCatalog() {
+        try {
+            // Try absolute path first to work from nested routes, then relative as fallback
+            let res = await fetch('/product_catalog.json');
+            if (!res.ok) res = await fetch('product_catalog.json');
+            state.catalog = await res.json();
+        } catch (err) {
+            console.error('Failed to load catalog', err);
+            toast('Failed to load catalog. Serve from repo root.');
+            state.catalog = {};
+        }
+        state.categories = Object.keys(state.catalog);
+        if (!state.categories.length) {
+            // Graceful empty-state UI
+            document.getElementById('wheel').innerHTML = '';
+            document.getElementById('legend').innerHTML = '';
+            document.getElementById('slotsToggles').innerHTML = '<div class="muted">No categories loaded</div>';
+            return;
+        }
+        initUI();
+    }
+
+    function initUI() {
+        buildCategorySelect();
+        buildWheel();
+        buildLegend();
+        buildSlotToggles();
+        bindGlobalActions();
+    }
+
+    function buildCategorySelect() {
+        const sel = document.getElementById('categorySelect');
+        sel.innerHTML = '';
+        state.categories.forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k; opt.textContent = state.keyToLabel[k] || k;
+            sel.appendChild(opt);
+        });
+    }
+
+    function pol2cart(r, a) { return { x: r * Math.cos(a), y: r * Math.sin(a) }; }
+    function arcPath(cx, cy, r, start, end) {
+        const s = pol2cart(r, start); const e = pol2cart(r, end);
+        const large = end - start <= Math.PI ? 0 : 1;
+        return `M ${cx} ${cy} L ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y} Z`;
+    }
+
+    function buildWheel() {
+        const svg = document.getElementById('wheel');
+        svg.innerHTML = '';
+        const n = state.categories.length;
+        const radius = 300; const inner = 80;
+        const colors = [
+            '#8b5cf6','#22d3ee','#f472b6','#34d399','#f59e0b','#60a5fa','#c084fc','#4ade80','#f97316','#a78bfa','#2dd4bf','#ef4444'
+        ];
+
+        state.categories.forEach((cat, i) => {
+            const start = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const end = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
+            const mid = (start + end) / 2;
+            const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            grp.classList.add('slice');
+            grp.dataset.category = cat;
+
+            const pathOuter = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathOuter.setAttribute('d', arcPath(0, 0, radius, start, end));
+            pathOuter.setAttribute('fill', colors[i % colors.length]);
+            pathOuter.setAttribute('opacity', '0.9');
+
+            const pathInner = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathInner.setAttribute('d', arcPath(0, 0, inner, start, end));
+            pathInner.setAttribute('fill', '#0f0f14');
+
+            const thumbClipId = `clip-${cat}`;
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            clip.setAttribute('id', thumbClipId);
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const thumbCenter = pol2cart((radius + inner) / 2.2, mid);
+            circle.setAttribute('cx', thumbCenter.x);
+            circle.setAttribute('cy', thumbCenter.y);
+            circle.setAttribute('r', '42');
+            clip.appendChild(circle); defs.appendChild(clip);
+
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            img.setAttribute('x', thumbCenter.x - 45);
+            img.setAttribute('y', thumbCenter.y - 45);
+            img.setAttribute('width', '90');
+            img.setAttribute('height', '90');
+            img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            img.setAttribute('clip-path', `url(#${thumbClipId})`);
+            img.classList.add('thumb-clip');
+
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            const labelPos = pol2cart(radius + 22, mid);
+            label.setAttribute('x', labelPos.x);
+            label.setAttribute('y', labelPos.y);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('alignment-baseline', 'middle');
+            label.setAttribute('class', 'label');
+            label.textContent = state.keyToLabel[cat] || cat;
+
+            const badge = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            const badgePos = pol2cart(radius - 24, mid);
+            badge.setAttribute('x', badgePos.x);
+            badge.setAttribute('y', badgePos.y);
+            badge.setAttribute('text-anchor', 'middle');
+            badge.setAttribute('alignment-baseline', 'middle');
+            badge.setAttribute('class', 'badge');
+            badge.textContent = '＋';
+
+            grp.appendChild(defs);
+            grp.appendChild(pathOuter);
+            grp.appendChild(pathInner);
+            grp.appendChild(img);
+            grp.appendChild(label);
+            grp.appendChild(badge);
+
+            const pop = 10; const dx = Math.cos(mid) * pop; const dy = Math.sin(mid) * pop;
+            grp.addEventListener('mouseenter', () => {
+                if (state.disabledSlots.has(cat)) return;
+                grp.style.transform = `translate(${dx}px, ${dy}px)`;
+            });
+            grp.addEventListener('mouseleave', () => { grp.style.transform = 'translate(0, 0)'; });
+            grp.addEventListener('click', () => {
+                if (state.disabledSlots.has(cat)) return;
+                state.activeSlice = cat;
+                openSelector(cat);
+            });
+
+            svg.appendChild(grp);
+        });
+    }
+
+    function buildLegend() {
+        const legend = document.getElementById('legend');
+        legend.innerHTML = '';
+        const box = legend.parentElement.getBoundingClientRect();
+        const cx = box.width / 2; const cy = box.height / 2;
+        const n = state.categories.length; const radius = 330;
+        state.categories.forEach((cat, i) => {
+            const start = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const end = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
+            const mid = (start + end) / 2;
+            const p = pol2cart(radius, mid);
+            const div = document.createElement('div');
+            div.className = 'legend-item';
+            div.style.left = (cx + p.x) + 'px';
+            div.style.top = (cy + p.y) + 'px';
+            div.textContent = state.keyToLabel[cat] || cat;
+            legend.appendChild(div);
+        });
+    }
+
+    function buildSlotToggles() {
+        const wrap = document.getElementById('slotsToggles');
+        wrap.innerHTML = '';
+        state.categories.forEach(cat => {
+            const row = document.createElement('div'); row.className = 'toggle';
+            const label = document.createElement('span'); label.className = 'muted'; label.textContent = (state.keyToLabel[cat] || cat);
+            const sw = document.createElement('div'); sw.className = 'switch on';
+            sw.dataset.slot = cat; sw.addEventListener('click', () => toggleSlot(cat, sw));
+            row.appendChild(label); row.appendChild(sw); wrap.appendChild(row);
+        });
+    }
+
+    function toggleSlot(cat, el) {
+        const svg = document.getElementById('wheel');
+        const slice = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === cat);
+        const enabled = el.classList.toggle('on');
+        if (enabled) {
+            state.disabledSlots.delete(cat);
+            if (slice) slice.classList.remove('disabled');
+        } else {
+            state.disabledSlots.add(cat);
+            if (slice) slice.classList.add('disabled');
+        }
+    }
+
+    function bindGlobalActions() {
+        document.getElementById('btnOpenAny').addEventListener('click', () => {
+            const first = state.categories[0];
+            state.activeSlice = first;
+            openSelector(first);
+        });
+        document.getElementById('closeFilters').addEventListener('click', closeSelector);
+        document.getElementById('categorySelect').addEventListener('change', e => renderResults(e.target.value, document.getElementById('searchInput').value));
+        document.getElementById('searchInput').addEventListener('input', e => renderResults(document.getElementById('categorySelect').value, e.target.value));
+        document.getElementById('mixBtn').addEventListener('click', onMix);
+        document.getElementById('btnPreview').addEventListener('click', () => togglePreview(true));
+        document.getElementById('btnBack').addEventListener('click', () => togglePreview(false));
+        document.getElementById('btnClear').addEventListener('click', clearAll);
+        window.addEventListener('resize', buildLegend);
+    }
+
+    function openSelector(category) {
+        const panel = document.getElementById('filtersPanel');
+        const sel = document.getElementById('categorySelect');
+        sel.value = category || 'tops';
+        document.getElementById('searchInput').value = '';
+        renderResults(sel.value, '');
+        panel.style.display = 'flex';
+        panel.animate([ { transform: 'translateY(-10px)', opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 } ], { duration: 180, easing: 'ease-out' });
+    }
+    function closeSelector() {
+        const panel = document.getElementById('filtersPanel');
+        panel.animate([ { transform: 'translateY(0px)', opacity: 1 }, { transform: 'translateY(-10px)', opacity: 0 } ], { duration: 140, easing: 'ease-in' }).onfinish = () => {
+            panel.style.display = 'none';
+        };
+    }
+
+    function renderResults(category, keyword) {
+        const grid = document.getElementById('resultsGrid');
+        grid.innerHTML = '';
+        const list = state.catalog[category] || [];
+        const filtered = list.filter(it => !keyword || it.name.toLowerCase().includes(keyword.toLowerCase()) || it.brand.toLowerCase().includes(keyword.toLowerCase()));
+        filtered.forEach(item => {
+            const card = document.createElement('div'); card.className = 'card';
+            const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name;
+            const meta = document.createElement('div'); meta.className = 'meta';
+            const name = document.createElement('div'); name.className = 'name'; name.textContent = item.name;
+            const brand = document.createElement('div'); brand.className = 'muted'; brand.textContent = item.brand;
+            const btn = document.createElement('button'); btn.textContent = 'Select'; btn.addEventListener('click', () => selectItem(category, item));
+            meta.appendChild(name); meta.appendChild(brand);
+            card.appendChild(img); card.appendChild(meta); card.appendChild(btn);
+            grid.appendChild(card);
+        });
+    }
+
+    function selectItem(category, item) {
+        state.selectedByCategory[category] = item;
+        applySelectionToWheel(category, item);
+        renderSelectedTable();
+        closeSelector();
+        showSelectedUI();
+    }
+
+    function applySelectionToWheel(category, item) {
+        const svg = document.getElementById('wheel');
+        const grp = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === category);
+        if (grp) {
+            const img = grp.querySelector('image');
+            img.setAttribute('href', item.image_path);
+            grp.classList.add('selected');
+        }
+    }
+
+    function renderSelectedTable() {
+        const tbody = document.querySelector('#selectedTable tbody');
+        tbody.innerHTML = '';
+        Object.entries(state.selectedByCategory).forEach(([cat, item]) => {
+            if (!item) return;
+            const tr = document.createElement('tr');
+            const tdItem = document.createElement('td');
+            const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name; img.className = 'thumb';
+            const text = document.createElement('div'); text.textContent = item.name;
+            const box = document.createElement('div'); box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.gap = '10px';
+            box.appendChild(img); box.appendChild(text); tdItem.appendChild(box);
+
+            const tdCat = document.createElement('td'); tdCat.textContent = state.keyToLabel[cat] || cat;
+            const tdAct = document.createElement('td');
+            const btn = document.createElement('button'); btn.className = 'btn-remove'; btn.textContent = 'Remove'; btn.addEventListener('click', () => removeItem(cat));
+            tdAct.appendChild(btn);
+
+            tr.appendChild(tdItem); tr.appendChild(tdCat); tr.appendChild(tdAct);
+            tbody.appendChild(tr);
+        });
+    }
+
+    function removeItem(category) {
+        delete state.selectedByCategory[category];
+        const svg = document.getElementById('wheel');
+        const grp = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === category);
+        if (grp) {
+            const img = grp.querySelector('image');
+            img.removeAttribute('href');
+            grp.classList.remove('selected');
+        }
+        renderSelectedTable();
+        if (Object.keys(state.selectedByCategory).length === 0) hideSelectedUI();
+    }
+
+    function showSelectedUI() {
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('selectedWrap').style.display = 'block';
+    }
+    function hideSelectedUI() {
+        document.getElementById('instructions').style.display = 'block';
+        document.getElementById('selectedWrap').style.display = 'none';
+    }
+
+    function togglePreview(show) {
+        const flip = document.getElementById('leftFlip');
+        if (show) {
+            const grid = document.getElementById('previewGrid');
+            grid.innerHTML = '';
+            Object.values(state.selectedByCategory).forEach(item => {
+                if (!item) return;
+                const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name; grid.appendChild(img);
+            });
+            flip.classList.add('show-preview');
+        } else {
+            flip.classList.remove('show-preview');
+        }
+    }
+
+    function onMix() {
+        const wheel = document.getElementById('wheel');
+        wheel.classList.remove('spin'); // restart animation
+        // force reflow
+        void wheel.offsetWidth;
+        wheel.classList.add('spin');
+
+        // Fill remaining categories with random picks (skipping disabled)
+        state.categories.forEach(cat => {
+            if (state.disabledSlots.has(cat)) return;
+            if (!state.selectedByCategory[cat]) {
+                const list = state.catalog[cat] || [];
+                if (list.length) {
+                    const choice = pickRandom(list);
+                    state.selectedByCategory[cat] = choice;
+                    applySelectionToWheel(cat, choice);
+                }
+            }
+        });
+        renderSelectedTable();
+        showSelectedUI();
+        toast('Mixed your outfit ✨');
+    }
+
+    function clearAll() {
+        state.selectedByCategory = {};
+        const svg = document.getElementById('wheel');
+        svg.querySelectorAll('.slice').forEach(grp => {
+            grp.classList.remove('selected');
+            const img = grp.querySelector('image');
+            if (img) img.removeAttribute('href');
+        });
+        renderSelectedTable();
+        hideSelectedUI();
+    }
+
+    function toast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 1600);
+    }
+
+    loadCatalog();
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Outfit Mixer — X</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: rgba(255, 255, 255, 0.06);
+      --panel-strong: rgba(255, 255, 255, 0.12);
+      --text: #e9ecf1;
+      --muted: #a6adbb;
+      --accent-1: #6e52ff;
+      --accent-2: #ff7fd1;
+      --accent-3: #22d1ee;
+      --glow: 0 10px 30px rgba(110, 82, 255, 0.35), 0 0 80px rgba(255, 127, 209, 0.2);
+      --radius: 16px;
+      --shadow-1: 0 1px 0 rgba(255,255,255,0.08) inset,
+                  0 10px 30px rgba(0,0,0,0.35),
+                  0 20px 60px rgba(0,0,0,0.35);
+      --brand-gradient: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: radial-gradient(1200px 800px at 90% -10%, rgba(110,82,255,0.12), transparent),
+                  radial-gradient(1000px 700px at -20% 120%, rgba(34,209,238,0.10), transparent),
+                  var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      margin: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px clamp(16px, 4vw, 40px);
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(to bottom, rgba(11,13,16,0.8), rgba(11,13,16,0));
+      z-index: 20;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .brand-badge {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: conic-gradient(from 0deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+      box-shadow: var(--glow);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: clamp(16px, 3vw, 28px);
+      padding: 4px clamp(16px, 4vw, 40px) 40px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Left: selection summary */
+    .summary {
+      padding: 20px;
+      position: sticky;
+      top: 88px;
+      height: fit-content;
+      max-height: calc(100vh - 120px);
+      overflow: auto;
+    }
+    .summary h2 {
+      margin: 6px 0 14px;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+    .table thead th {
+      text-align: left;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 0 10px 8px;
+    }
+    .table tbody tr {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25) inset;
+    }
+    .table tbody td {
+      padding: 10px;
+      vertical-align: middle;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 0.8fr 60px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .chip .dot { width: 10px; height: 10px; border-radius: 999px; box-shadow: 0 0 0 2px rgba(255,255,255,0.15) inset; }
+    .chip-ghost { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+    .thumb {
+      width: 28px; height: 28px; border-radius: 8px; overflow: hidden; flex: none;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .row-actions {
+      display: flex; gap: 6px; justify-content: flex-end;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 8px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      cursor: pointer; transition: transform .12s ease, background .2s ease, border .2s ease, box-shadow .2s ease;
+      font-weight: 600; font-size: 12px; letter-spacing: .02em; text-transform: uppercase;
+    }
+    .btn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.1); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary {
+      background: var(--brand-gradient);
+      border: none;
+      box-shadow: var(--glow);
+    }
+    .btn-danger { background: rgba(239,68,68,0.16); border-color: rgba(239,68,68,0.5); }
+
+    .total {
+      margin-top: 16px; padding-top: 12px;
+      border-top: 1px dashed rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: space-between;
+      font-weight: 700; letter-spacing: 0.02em;
+    }
+
+    /* Right: wheel */
+    .studio { position: relative; }
+    .stage {
+      position: relative;
+      display: grid; place-items: center;
+      min-height: 620px;
+    }
+
+    .wheel-wrap {
+      position: relative;
+      width: min(80vw, 560px);
+      aspect-ratio: 1 / 1;
+    }
+
+    .wheel {
+      width: 100%; height: 100%;
+      filter: drop-shadow(0 14px 50px rgba(0,0,0,0.6));
+    }
+
+    .wheel-ring {
+      position: absolute; inset: -14px;
+      pointer-events: none;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(110,82,255,0.16), rgba(255,127,209,0.10), rgba(34,209,238,0.12), rgba(110,82,255,0.16));
+      filter: blur(10px) saturate(1.2);
+    }
+
+    .slice {
+      cursor: pointer;
+      transition: transform 200ms ease, filter 200ms ease;
+    }
+    .slice:hover { filter: brightness(1.1) saturate(1.1); }
+    .slice.selected path { stroke: rgba(255,255,255,0.8); stroke-width: 2; }
+
+    .slice-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; fill: var(--text);
+      opacity: 0.95;
+      paint-order: stroke; stroke: rgba(11,13,16,0.7); stroke-width: 5px; stroke-linejoin: round;
+    }
+
+    .center-ui { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+    .mix-btn {
+      pointer-events: auto;
+      width: clamp(110px, 20vw, 160px); aspect-ratio: 1 / 1; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(255,255,255,0.18), rgba(255,255,255,0.04)), var(--brand-gradient);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), var(--glow);
+      border: none; color: white; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+      font-size: clamp(14px, 2vw, 18px);
+      cursor: pointer; transition: transform .2s ease, box-shadow .3s ease, filter .2s ease;
+      position: relative; overflow: hidden;
+    }
+    .mix-btn::after {
+      content: ""; position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), transparent 45%);
+      filter: blur(10px);
+      mix-blend-mode: soft-light;
+    }
+    .mix-btn:hover { transform: translateY(-2px) scale(1.02); }
+    .mix-btn:active { transform: translateY(0) scale(0.98); }
+
+    .wheel-spinning { animation: spin 1200ms cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(720deg); } }
+
+    .thumb-icon {
+      pointer-events: none;
+      transform-box: fill-box; transform-origin: center;
+      filter: drop-shadow(0 4px 14px rgba(0,0,0,0.6));
+    }
+
+    /* Picker side panel */
+    .picker {
+      position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 92vw);
+      background: linear-gradient(180deg, rgba(10,12,15,0.9), rgba(10,12,15,0.82));
+      border-left: 1px solid rgba(255,255,255,0.1);
+      box-shadow: -40px 0 120px rgba(0,0,0,0.5);
+      transform: translateX(100%);
+      transition: transform 260ms cubic-bezier(.2,.8,.2,1);
+      z-index: 40;
+      display: grid; grid-template-rows: auto auto 1fr;
+      backdrop-filter: blur(10px);
+    }
+    .picker.open { transform: translateX(0); }
+    .picker-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 18px 8px; }
+    .picker-title { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+    .picker-sub { color: var(--muted); font-size: 12px; }
+    .picker-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .filter { padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-weight: 700; letter-spacing: 0.04em; font-size: 12px; }
+    .filter.active { background: rgba(110,82,255,0.25); border-color: rgba(110,82,255,0.8); box-shadow: 0 8px 30px rgba(110,82,255,0.3) inset; }
+    .picker-grid { padding: 16px; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid; grid-template-columns: 84px 1fr; gap: 12px; align-items: center;
+      transition: transform .15s ease, background .2s ease, border .2s ease, box-shadow .2s ease;
+      cursor: pointer;
+    }
+    .card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.08); box-shadow: 0 14px 40px rgba(0,0,0,0.35); }
+    .card .price { font-weight: 800; letter-spacing: 0.06em; }
+    .card .meta { color: var(--muted); font-size: 12px; }
+    .card .img { width: 84px; height: 84px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); }
+
+    .clear-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+
+    /* Category keys near wheel */
+    .keys { position: absolute; inset: 0; pointer-events: none; }
+    .key-label { position: absolute; transform: translate(-50%, -50%); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; text-shadow: 0 1px 0 rgba(0,0,0,0.4); }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+      .app { grid-template-columns: 1fr; }
+      .summary { position: static; max-height: none; }
+      .stage { min-height: 520px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-badge"></div>
+      <div>X — Outfit Mixer</div>
+    </div>
+    <div class="brand" style="gap:10px; opacity:.9">
+      <span style="font-weight:600; letter-spacing:.06em;">Find your look</span>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" fill="url(#g)"/><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6e52ff"/><stop offset="1" stop-color="#ff7fd1"/></linearGradient></defs></svg>
+    </div>
+  </header>
+
+  <main class="app">
+    <!-- Left: Selection Summary -->
+    <section class="panel summary" aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Your Selection</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Item</th>
+            <th>Price</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="summary-body">
+        </tbody>
+      </table>
+      <div class="total">
+        <div>Total</div>
+        <div id="total-price">$0</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn" id="clear-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Clear</button>
+        <button class="btn btn-primary" id="randomize-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21H3V17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21L10 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3H21V7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3L14 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Surprise Me</button>
+      </div>
+    </section>
+
+    <!-- Right: Wheel Studio -->
+    <section class="panel studio">
+      <div class="stage">
+        <div class="wheel-wrap">
+          <div class="wheel-ring"></div>
+          <svg id="wheel" class="wheel" viewBox="0 0 600 600" role="img" aria-label="Outfit Mixer Wheel">
+            <defs>
+              <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feOffset dx="0" dy="2"/>
+                <feGaussianBlur stdDeviation="6" result="offset-blur"/>
+                <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+                <feFlood flood-color="#000" flood-opacity="0.4" result="color"/>
+                <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+                <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+              </filter>
+            </defs>
+            <g id="slices"></g>
+            <g id="thumbs"></g>
+            <g id="labels"></g>
+          </svg>
+          <div class="keys" id="keys"></div>
+          <div class="center-ui">
+            <button id="mix-btn" class="mix-btn">Mix</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Picker Panel -->
+  <aside id="picker" class="picker" aria-hidden="true">
+    <div class="picker-header">
+      <div>
+        <div class="picker-title" id="picker-title">Choose Item</div>
+        <div class="picker-sub" id="picker-sub"></div>
+      </div>
+      <button class="btn" id="picker-close">Close</button>
+    </div>
+    <div class="picker-filters" id="picker-filters"></div>
+    <div class="picker-grid" id="picker-grid"></div>
+  </aside>
+
+  <script>
+    ;(() => {
+      const categories = [
+        { id: 'tops', label: 'Tops' },
+        { id: 'bottoms', label: 'Bottoms' },
+        { id: 'sunglasses', label: 'Sunglasses' },
+        { id: 'shoes', label: 'Shoes' },
+        { id: 'accessory1', label: 'Accessory I', isAccessory: true },
+        { id: 'accessory2', label: 'Accessory II', isAccessory: true },
+        { id: 'accessory3', label: 'Accessory III', isAccessory: true },
+      ]
+
+      const accessoryTypes = [
+        'Earrings','Necklaces','Ties','Gloves','Belts','Handbags','Watches'
+      ]
+
+      const palettes = ['Monochrome','Earth','Pastel','Vibrant','Neutral']
+
+      const wheelCfg = {
+        cx: 300, cy: 300, r: 260,
+      }
+
+      // UI toggles for label rendering
+      const uiCfg = {
+        showSliceLabels: true,           // SVG text on the ring
+        showExternalKeyLabels: false,    // HTML labels outside the ring
+      }
+
+      const state = {
+        catalog: buildCatalog(),
+        selected: {},
+        filter: null,
+        currentCategory: null,
+      }
+
+      // Utility
+      function currency(n) { return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n) }
+      function deg2rad(d) { return d * Math.PI / 180 }
+      function polar(cx, cy, r, angleDeg) {
+        const a = deg2rad(angleDeg)
+        return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }
+      }
+      function describeSector(cx, cy, r, a0, a1) {
+        const start = polar(cx, cy, r, a0)
+        const end = polar(cx, cy, r, a1)
+        const largeArc = (a1 - a0) % 360 > 180 ? 1 : 0
+        return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`
+      }
+
+      // Data
+      function buildCatalog() {
+        const items = {
+          tops: [
+            { name: 'Silk Blouse', palette: 'Neutral', color: '#e3ded8', price: 180 },
+            { name: 'Cropped Denim Jacket', palette: 'Vibrant', color: '#3172ff', price: 220 },
+            { name: 'Cashmere Turtleneck', palette: 'Monochrome', color: '#111111', price: 320 },
+            { name: 'Linen Shirt', palette: 'Earth', color: '#c2a678', price: 140 },
+            { name: 'Pastel Cardigan', palette: 'Pastel', color: '#ffc3d7', price: 160 },
+            { name: 'Satin Camisole', palette: 'Neutral', color: '#f4efe9', price: 130 },
+          ],
+          bottoms: [
+            { name: 'Tailored Trousers', palette: 'Monochrome', color: '#2a2a2a', price: 260 },
+            { name: 'High-Rise Jeans', palette: 'Vibrant', color: '#1b5fff', price: 190 },
+            { name: 'Pleated Skirt', palette: 'Pastel', color: '#c6e3ff', price: 210 },
+            { name: 'Linen Wide-Leg', palette: 'Earth', color: '#bfa37a', price: 200 },
+            { name: 'Silk Midi Skirt', palette: 'Neutral', color: '#ede7df', price: 280 },
+          ],
+          sunglasses: [
+            { name: 'Cat-Eye Frames', palette: 'Monochrome', color: '#222222', price: 150 },
+            { name: 'Aviator Gold', palette: 'Earth', color: '#caa46b', price: 220 },
+            { name: 'Translucent Pastel', palette: 'Pastel', color: '#ffd9f0', price: 160 },
+            { name: 'Neon Rimless', palette: 'Vibrant', color: '#ff3dbb', price: 180 },
+            { name: 'Matte Ivory', palette: 'Neutral', color: '#f1efe8', price: 170 },
+          ],
+          shoes: [
+            { name: 'Chelsea Boots', palette: 'Monochrome', color: '#111111', price: 380 },
+            { name: 'Loafers', palette: 'Neutral', color: '#e9e3da', price: 300 },
+            { name: 'Strappy Heels', palette: 'Vibrant', color: '#ff5a8a', price: 340 },
+            { name: 'Canvas Sneakers', palette: 'Pastel', color: '#b8e1ff', price: 180 },
+            { name: 'Suede Mules', palette: 'Earth', color: '#a27645', price: 260 },
+          ],
+          accessories: {
+            Earrings: [
+              { name: 'Pearl Studs', palette: 'Neutral', color: '#ffffff', price: 120 },
+              { name: 'Hoop Gold', palette: 'Earth', color: '#d1a96c', price: 180 },
+              { name: 'Prism Acrylic', palette: 'Vibrant', color: '#ff7fd1', price: 85 },
+            ],
+            Necklaces: [
+              { name: 'Herringbone Chain', palette: 'Earth', color: '#caa46b', price: 220 },
+              { name: 'Minimal Pendant', palette: 'Monochrome', color: '#1f1f1f', price: 140 },
+              { name: 'Candy Beads', palette: 'Pastel', color: '#ffd1e6', price: 95 },
+            ],
+            Ties: [
+              { name: 'Silk Charcoal', palette: 'Monochrome', color: '#222222', price: 110 },
+              { name: 'Rust Linen', palette: 'Earth', color: '#ad6e42', price: 80 },
+              { name: 'Electric Fuchsia', palette: 'Vibrant', color: '#ff2e9b', price: 90 },
+            ],
+            Gloves: [
+              { name: 'Nappa Leather', palette: 'Monochrome', color: '#121212', price: 210 },
+              { name: 'Knit Mittens', palette: 'Pastel', color: '#f6ccec', price: 60 },
+              { name: 'Camel Suede', palette: 'Earth', color: '#a87d4d', price: 150 },
+            ],
+            Belts: [
+              { name: 'Double Buckle', palette: 'Monochrome', color: '#262626', price: 130 },
+              { name: 'Braided Tan', palette: 'Earth', color: '#b8834f', price: 95 },
+              { name: 'Vanilla Leather', palette: 'Neutral', color: '#efe8db', price: 120 },
+            ],
+            Handbags: [
+              { name: 'Mini Top-Handle', palette: 'Neutral', color: '#efe9e1', price: 420 },
+              { name: 'Cobalt Crossbody', palette: 'Vibrant', color: '#246bff', price: 380 },
+              { name: 'Sage Shoulder Bag', palette: 'Pastel', color: '#b7e2c9', price: 360 },
+            ],
+            Watches: [
+              { name: 'Mesh Steel', palette: 'Monochrome', color: '#1c1c1c', price: 540 },
+              { name: 'Gold Classic', palette: 'Earth', color: '#d2b06e', price: 590 },
+              { name: 'Ivory Ceramic', palette: 'Neutral', color: '#f2ede4', price: 560 },
+            ]
+          }
+        }
+        return items
+      }
+
+      // Thumbnails as inline SVG dataURIs
+      const thumbCache = new Map()
+      function itemThumb(item) {
+        const key = item.name + '|' + item.color
+        if (thumbCache.has(key)) return thumbCache.get(key)
+        const letter = item.name.charAt(0)
+        const svg = encodeURIComponent(
+          `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'>`+
+          `<defs>`+
+          `<radialGradient id='g' cx='30%' cy='30%'>`+
+          `<stop offset='0%' stop-color='white' stop-opacity='.6'/>`+
+          `<stop offset='70%' stop-color='${item.color}' stop-opacity='1'/>`+
+          `<stop offset='100%' stop-color='${shade(item.color, -14)}' stop-opacity='1'/>`+
+          `</radialGradient>`+
+          `</defs>`+
+          `<rect x='0' y='0' width='120' height='120' rx='22' fill='url(#g)'/>`+
+          `<text x='50%' y='58%' text-anchor='middle' font-family='system-ui, -apple-system, Segoe UI, Roboto, Arial' font-size='54' font-weight='900' fill='rgba(0,0,0,0.6)'>${letter}</text>`+
+          `</svg>`
+        )
+        const uri = `data:image/svg+xml;utf8,${svg}`
+        thumbCache.set(key, uri)
+        return uri
+      }
+      function shade(hex, percent) {
+        hex = hex.replace('#','')
+        const num = parseInt(hex,16)
+        let r = (num>>16) + Math.round(255*percent/100)
+        let g = ((num>>8)&0x00FF) + Math.round(255*percent/100)
+        let b = (num&0x0000FF) + Math.round(255*percent/100)
+        r = Math.max(0, Math.min(255, r))
+        g = Math.max(0, Math.min(255, g))
+        b = Math.max(0, Math.min(255, b))
+        return '#' + (r<<16 | g<<8 | b).toString(16).padStart(6,'0')
+      }
+
+      // Wheel rendering
+      function renderWheel() {
+        const slicesG = document.getElementById('slices')
+        const labelsG = document.getElementById('labels')
+        const thumbsG = document.getElementById('thumbs')
+        const keysEl = document.getElementById('keys')
+        slicesG.innerHTML = ''
+        labelsG.innerHTML = ''
+        thumbsG.innerHTML = ''
+        if (uiCfg.showExternalKeyLabels) keysEl.innerHTML = ''
+
+        const N = categories.length
+        const step = 360 / N
+        const base = -90 // start at top
+
+        categories.forEach((cat, i) => {
+          const a0 = base + i * step
+          const a1 = base + (i+1) * step
+          const mid = (a0 + a1) / 2
+
+          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+          group.classList.add('slice')
+          group.dataset.id = cat.id
+          group.dataset.mid = String(mid)
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+          path.setAttribute('d', describeSector(wheelCfg.cx, wheelCfg.cy, wheelCfg.r, a0, a1))
+          path.setAttribute('fill', conicFill(i))
+          path.setAttribute('filter', 'url(#innerShadow)')
+          group.appendChild(path)
+
+          // Hover pop-out
+          group.addEventListener('mouseenter', () => {
+            const d = 12
+            const rad = deg2rad(mid)
+            group.style.transform = `translate(${Math.cos(rad)*d}px, ${Math.sin(rad)*d}px)`
+          })
+          group.addEventListener('mouseleave', () => {
+            group.style.transform = state.selected[cat.id] ? `translate(${Math.cos(deg2rad(mid))*6}px, ${Math.sin(deg2rad(mid))*6}px)` : ''
+          })
+
+          group.addEventListener('click', () => openPicker(cat))
+
+          slicesG.appendChild(group)
+
+          // Precompute an outer point for label/key placement
+          const outer = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r + 22, mid)
+
+          // Label on ring (SVG)
+          if (uiCfg.showSliceLabels) {
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+            label.classList.add('slice-label')
+            label.setAttribute('x', String(outer.x))
+            label.setAttribute('y', String(outer.y))
+            label.setAttribute('text-anchor', 'middle')
+            label.setAttribute('dominant-baseline', 'middle')
+            label.setAttribute('transform', `rotate(${mid}, ${outer.x}, ${outer.y}) rotate(${mid>90||mid<-90?180:0}, ${outer.x}, ${outer.y})`)
+            label.textContent = cat.label
+            labelsG.appendChild(label)
+          }
+
+          // External key labels (adjacent to pie)
+          if (uiCfg.showExternalKeyLabels) {
+            placeKeyLabel(cat, outer, mid)
+          }
+        })
+
+        updateSelectionVisuals()
+      }
+
+      function conicFill(i) {
+        // Alternating luxe gradient bands
+        const palette = ["#1a1c22","#151820","#13161c","#10131a"]
+        const a = palette[i % palette.length]
+        const b = shade(a, 12)
+        return `url(#grad-${i})`
+      }
+
+      // Build defs gradients dynamically (one per slice)
+      function ensureSliceGradients() {
+        const svg = document.getElementById('wheel')
+        let defs = svg.querySelector('defs#slice-defs')
+        if (!defs) {
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs')
+          defs.id = 'slice-defs'
+          svg.insertBefore(defs, svg.firstChild)
+        }
+        defs.innerHTML = ''
+        const N = categories.length
+        for (let i=0;i<N;i++) {
+          const id = `grad-${i}`
+          const lg = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient')
+          lg.id = id
+          lg.setAttribute('x1','0%'); lg.setAttribute('y1','0%'); lg.setAttribute('x2','100%'); lg.setAttribute('y2','100%')
+          const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+          const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+          const base = [
+            ['#1b2030', '#10131a'],
+            ['#161a25', '#0e1117'],
+            ['#15202a', '#0b1116'],
+            ['#1a1b27', '#0f1119'],
+          ][i % 4]
+          stop1.setAttribute('offset','0%'); stop1.setAttribute('stop-color', base[0])
+          stop2.setAttribute('offset','100%'); stop2.setAttribute('stop-color', base[1])
+          lg.appendChild(stop1); lg.appendChild(stop2)
+          defs.appendChild(lg)
+        }
+      }
+
+      function placeKeyLabel(cat, outerPoint, angle) {
+        const keys = document.getElementById('keys')
+        const wrap = document.createElement('div')
+        wrap.className = 'key-label'
+        const r = wheelCfg.r + 48
+        const pos = polar(wheelCfg.cx, wheelCfg.cy, r, angle)
+        // Convert SVG coords to absolute inside wheel-wrap
+        // wheel viewBox is 0..600, container is sized to element width
+        const wheel = document.getElementById('wheel')
+        const bbox = wheel.getBoundingClientRect()
+        // Using percentages within keys container
+        const pctX = (pos.x / 600) * 100
+        const pctY = (pos.y / 600) * 100
+        wrap.style.left = pctX + '%'
+        wrap.style.top = pctY + '%'
+        wrap.textContent = cat.label
+        keys.appendChild(wrap)
+      }
+
+      function updateSelectionVisuals() {
+        const slices = Array.from(document.querySelectorAll('#slices .slice'))
+        const thumbsG = document.getElementById('thumbs')
+        thumbsG.innerHTML = ''
+
+        slices.forEach(g => {
+          const id = g.dataset.id
+          const mid = parseFloat(g.dataset.mid || '0')
+          if (state.selected[id]) {
+            g.classList.add('selected')
+            const d = 6
+            const rad = deg2rad(mid)
+            g.style.transform = `translate(${Math.cos(rad)*d}px, ${Math.sin(rad)*d}px)`
+
+            const pos = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r*0.62, mid)
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+            img.setAttribute('href', itemThumb(state.selected[id].item))
+            img.setAttribute('x', String(pos.x - 34))
+            img.setAttribute('y', String(pos.y - 34))
+            img.setAttribute('width', '68')
+            img.setAttribute('height', '68')
+            img.setAttribute('clip-path', 'circle(50% at 50% 50%)')
+            img.setAttribute('class', 'thumb-icon')
+            thumbsG.appendChild(img)
+          } else {
+            g.classList.remove('selected')
+            g.style.transform = ''
+          }
+        })
+      }
+
+      // Picker logic
+      const pickerEl = document.getElementById('picker')
+      const pickerTitle = document.getElementById('picker-title')
+      const pickerSub = document.getElementById('picker-sub')
+      const pickerFilters = document.getElementById('picker-filters')
+      const pickerGrid = document.getElementById('picker-grid')
+      document.getElementById('picker-close').addEventListener('click', () => closePicker())
+
+      function openPicker(cat) {
+        state.currentCategory = cat
+        pickerTitle.textContent = `Choose ${cat.label}`
+        pickerSub.textContent = cat.isAccessory ? 'Pick an accessory type, then an item' : 'Pick one item to add to your look'
+        pickerFilters.innerHTML = ''
+
+        let items = []
+        if (cat.isAccessory) {
+          // accessory type chips
+          accessoryTypes.forEach((t, idx) => {
+            const chip = document.createElement('button')
+            chip.className = 'filter' + (idx===0 ? ' active' : '')
+            chip.textContent = t
+            chip.addEventListener('click', () => {
+              Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+              chip.classList.add('active')
+              renderPickerGrid(cat, t)
+            })
+            pickerFilters.appendChild(chip)
+          })
+          renderPickerGrid(cat, accessoryTypes[0])
+        } else {
+          // palette filter chips
+          const allChip = document.createElement('button')
+          allChip.className = 'filter active'
+          allChip.textContent = 'All Palettes'
+          allChip.addEventListener('click', () => {
+            Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+            allChip.classList.add('active')
+            state.filter = null
+            renderPickerGrid(cat)
+          })
+          pickerFilters.appendChild(allChip)
+          palettes.forEach(p => {
+            const chip = document.createElement('button')
+            chip.className = 'filter'
+            chip.textContent = p
+            chip.addEventListener('click', () => {
+              Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+              chip.classList.add('active')
+              state.filter = p
+              renderPickerGrid(cat)
+            })
+            pickerFilters.appendChild(chip)
+          })
+          renderPickerGrid(cat)
+        }
+
+        pickerEl.classList.add('open')
+        pickerEl.setAttribute('aria-hidden','false')
+      }
+
+      function renderPickerGrid(cat, accessoryType) {
+        pickerGrid.innerHTML = ''
+        let list = []
+        if (cat.isAccessory) {
+          list = state.catalog.accessories[accessoryType] || []
+        } else {
+          list = state.catalog[cat.id] || []
+          if (state.filter) list = list.filter(it => it.palette === state.filter)
+        }
+        list.forEach(item => {
+          const card = document.createElement('div')
+          card.className = 'card'
+          card.addEventListener('click', () => {
+            selectItem(cat, item, accessoryType)
+            closePicker()
+          })
+          const img = document.createElement('div')
+          img.className = 'img'
+          img.style.backgroundImage = `url(${itemThumb(item)})`
+          img.style.backgroundSize = 'cover'
+          img.style.backgroundPosition = 'center'
+          const info = document.createElement('div')
+          const title = document.createElement('div')
+          title.style.fontWeight = '800'
+          title.style.letterSpacing = '0.02em'
+          title.textContent = item.name
+          const meta = document.createElement('div')
+          meta.className = 'meta'
+          meta.textContent = `${item.palette} • ${accessoryType ? accessoryType : cat.label}`
+          const price = document.createElement('div')
+          price.className = 'price'
+          price.textContent = currency(item.price)
+          info.appendChild(title)
+          info.appendChild(meta)
+          info.appendChild(price)
+          card.appendChild(img)
+          card.appendChild(info)
+          pickerGrid.appendChild(card)
+        })
+      }
+
+      function closePicker() {
+        pickerEl.classList.remove('open')
+        pickerEl.setAttribute('aria-hidden','true')
+        state.filter = null
+      }
+
+      function selectItem(cat, item, accessoryType) {
+        state.selected[cat.id] = { item, type: cat.isAccessory ? (accessoryType || 'Accessory') : null }
+        renderSummary()
+        updateSelectionVisuals()
+      }
+
+      function clearItem(catId) {
+        delete state.selected[catId]
+        renderSummary()
+        updateSelectionVisuals()
+      }
+
+      // Summary table
+      function renderSummary() {
+        const body = document.getElementById('summary-body')
+        body.innerHTML = ''
+        let total = 0
+
+        categories.forEach(cat => {
+          const row = document.createElement('tr')
+          const td = (n=1)=>{const e=document.createElement('td'); e.colSpan=n; return e}
+
+          // Col 1: Category
+          const c1 = td()
+          c1.innerHTML = `<span class="chip chip-ghost">${cat.label}</span>`
+
+          // Col 2: Item or Add CTA
+          const c2 = td()
+          if (state.selected[cat.id]) {
+            const sel = state.selected[cat.id]
+            const wrap = document.createElement('div')
+            wrap.style.display = 'flex'
+            wrap.style.alignItems = 'center'
+            wrap.style.gap = '10px'
+            const th = document.createElement('div')
+            th.className = 'thumb'
+            th.style.backgroundImage = `url(${itemThumb(sel.item)})`
+            th.style.backgroundSize = 'cover'
+            const name = document.createElement('div')
+            name.style.fontWeight = '700'
+            name.textContent = sel.item.name
+            const meta = document.createElement('div')
+            meta.className = 'chip'
+            meta.innerHTML = `<span class="dot" style="background:${sel.item.color}"></span>${sel.item.palette}${sel.type ? ' • '+sel.type : ''}`
+            wrap.appendChild(th)
+            const inner = document.createElement('div')
+            inner.appendChild(name)
+            inner.appendChild(meta)
+            c2.appendChild(wrap)
+            wrap.appendChild(inner)
+          } else {
+            const add = document.createElement('button')
+            add.className = 'btn'
+            add.textContent = 'Add…'
+            add.addEventListener('click', () => openPicker(cat))
+            c2.appendChild(add)
+          }
+
+          // Col 3: Price
+          const c3 = td()
+          if (state.selected[cat.id]) {
+            const p = state.selected[cat.id].item.price
+            total += p
+            c3.textContent = currency(p)
+          } else {
+            c3.innerHTML = '<span style="color:var(--muted)">—</span>'
+          }
+
+          // Col 4: Actions
+          const c4 = td()
+          const actionWrap = document.createElement('div')
+          actionWrap.className = 'row-actions'
+          const chooseBtn = document.createElement('button')
+          chooseBtn.className = 'btn'
+          chooseBtn.textContent = 'Choose'
+          chooseBtn.addEventListener('click', () => openPicker(cat))
+          actionWrap.appendChild(chooseBtn)
+          if (state.selected[cat.id]) {
+            const clearBtn = document.createElement('button')
+            clearBtn.className = 'btn btn-danger'
+            clearBtn.textContent = 'Remove'
+            clearBtn.addEventListener('click', () => clearItem(cat.id))
+            actionWrap.appendChild(clearBtn)
+          }
+          c4.appendChild(actionWrap)
+
+          // Assemble
+          const wrapper = document.createElement('td')
+          wrapper.colSpan = 4
+          const rowDiv = document.createElement('div')
+          rowDiv.className = 'row'
+          rowDiv.appendChild(c1)
+          rowDiv.appendChild(c2)
+          rowDiv.appendChild(c3)
+          rowDiv.appendChild(c4)
+          wrapper.appendChild(rowDiv)
+          row.appendChild(wrapper)
+          body.appendChild(row)
+        })
+
+        document.getElementById('total-price').textContent = currency(total)
+      }
+
+      // Mix logic
+      function computeDominantPalette() {
+        const counts = new Map()
+        Object.values(state.selected).forEach(({item}) => {
+          counts.set(item.palette, (counts.get(item.palette)||0)+1)
+        })
+        let best = null, max = 0
+        counts.forEach((v, k) => { if (v>max) { max=v; best=k } })
+        return best // can be null
+      }
+
+      function pickItemForCategory(cat, preferPalette, accessoryType) {
+        let pool = []
+        if (cat.isAccessory) {
+          const types = accessoryType ? [accessoryType] : accessoryTypes
+          types.forEach(t => { pool = pool.concat(state.catalog.accessories[t]) })
+        } else {
+          pool = state.catalog[cat.id]
+        }
+        if (preferPalette) {
+          const filtered = pool.filter(it => it.palette === preferPalette)
+          if (filtered.length) pool = filtered
+        }
+        return pool[Math.floor(Math.random()*pool.length)]
+      }
+
+      function spinWheelOnce() {
+        const wheelEl = document.querySelector('.wheel-wrap')
+        wheelEl.classList.add('wheel-spinning')
+        return new Promise(res => setTimeout(() => {
+          wheelEl.classList.remove('wheel-spinning'); res()
+        }, 1200))
+      }
+
+      async function mixFill() {
+        const prefer = computeDominantPalette() || palettes[Math.floor(Math.random()*palettes.length)]
+        // randomly assign accessory types for empty accessory slots
+        const shuffledTypes = accessoryTypes.slice().sort(()=>Math.random()-0.5)
+        let tIdx = 0
+        for (const cat of categories) {
+          if (!state.selected[cat.id]) {
+            const type = cat.isAccessory ? shuffledTypes[tIdx++ % shuffledTypes.length] : null
+            const item = pickItemForCategory(cat, prefer, type)
+            state.selected[cat.id] = { item, type }
+          }
+        }
+        renderSummary(); updateSelectionVisuals()
+      }
+
+      // Events
+      document.getElementById('mix-btn').addEventListener('click', async () => {
+        await spinWheelOnce()
+        await mixFill()
+        confettiBurst()
+      })
+
+      document.getElementById('randomize-all').addEventListener('click', async () => {
+        state.selected = {}
+        renderSummary(); updateSelectionVisuals()
+        await spinWheelOnce()
+        await mixFill()
+        confettiBurst()
+      })
+
+      document.getElementById('clear-all').addEventListener('click', () => {
+        state.selected = {}
+        renderSummary(); updateSelectionVisuals()
+      })
+
+      // Confetti
+      function confettiBurst() {
+        const container = document.querySelector('.stage')
+        const burst = document.createElement('div')
+        burst.style.position = 'absolute'
+        burst.style.inset = 0
+        burst.style.pointerEvents = 'none'
+        container.appendChild(burst)
+        const colors = ['#6e52ff','#ff7fd1','#22d1ee','#f9f871','#7cf1be']
+        for (let i=0;i<24;i++) {
+          const p = document.createElement('div')
+          const size = 6 + Math.random()*8
+          p.style.position = 'absolute'
+          p.style.left = '50%'; p.style.top = '50%'
+          p.style.width = size+'px'; p.style.height = size+'px'
+          p.style.background = colors[i%colors.length]
+          p.style.borderRadius = Math.random()>.5 ? '2px' : '999px'
+          p.style.transform = `translate(-50%,-50%) rotate(${Math.random()*360}deg)`
+          p.style.filter = 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))'
+          burst.appendChild(p)
+          const dx = (Math.random()-.5) * 320
+          const dy = (Math.random()-.5) * 240
+          const rot = (Math.random()-.5) * 720
+          p.animate([
+            { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`, opacity: 0 }
+          ], { duration: 900 + Math.random()*500, easing: 'cubic-bezier(.15,.8,.2,1)', fill: 'forwards' })
+        }
+        setTimeout(()=>burst.remove(), 1600)
+      }
+
+      // Init
+      ensureSliceGradients()
+      renderWheel()
+      renderSummary()
+
+      // Recompute key labels on resize only if external keys are enabled
+      window.addEventListener('resize', () => {
+        if (!uiCfg.showExternalKeyLabels) return
+        const keys = document.getElementById('keys')
+        keys.innerHTML = ''
+        const N = categories.length
+        const step = 360 / N
+        const base = -90
+        categories.forEach((cat, i) => {
+          const a0 = base + i * step
+          const a1 = base + (i+1) * step
+          const mid = (a0 + a1) / 2
+          const pos = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r + 22, mid)
+          placeKeyLabel(cat, pos, mid)
+        })
+      })
+
+    })()
+  </script>
+</body>
+</html>
+
+```
+
+I’m going to start a local static server from the repo root so the page can fetch the catalog reliably, and then you can open the mixer at the correct URL.
+
+- Open `http://localhost:8000/outfit-mixer.html` in your browser. The server allows the page to load `product_catalog.json`; the wheel should then render.
+- If you still see no slices, ensure you’re visiting the URL above (not file://). The left panel now shows a toast if the catalog fails to load.
+
+- Added a robust catalog loader with absolute/relative fetch fallback and empty-state messaging.
+- Started a local server from `/data/projects/svg_coding_eval` so assets resolve correctly.
+
+---
+
+**User**
+
+Can you have the catalog data bake into the HTML file? The ask is to create a single HTML artifact.
+
+---
+
+**Cursor**
+
+I’m embedding the full `product_catalog.json` directly into `outfit-mixer.html` and updating the loader to parse it from the page, eliminating the external fetch so the wheel renders from a single HTML artifact even over file://.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>X Outfit Mixer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f12;
+            --panel: #141418;
+            --muted: #8b8d93;
+            --text: #eef0f3;
+            --accent: #9b87f5;
+            --accent-2: #22d3ee;
+            --danger: #ef4444;
+            --ok: #10b981;
+            --gold: #c9ad6a;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 700px at 70% 20%, #191a20, var(--bg));
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+        .app-shell {
+            display: grid;
+            grid-template-columns: 360px 1fr 360px;
+            gap: 18px;
+            padding: 20px 22px;
+            height: 100vh;
+        }
+        .panel {
+            background: linear-gradient(180deg, #141418, #111116);
+            border: 1px solid #23232a;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03);
+            overflow: hidden;
+        }
+        .left-panel, .right-panel { display: flex; flex-direction: column; }
+        .panel-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #23232a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand { font-family: "Playfair Display", serif; letter-spacing: 0.3px; }
+        .brand strong { font-weight: 700; color: var(--gold); }
+        .muted { color: var(--muted); }
+        .instructions { padding: 18px; line-height: 1.5; color: #d5d7dc; }
+        .instructions h3 { margin: 0 0 10px 0; font-weight: 600; font-size: 18px; }
+        .instructions ol { margin: 8px 0 0 18px; padding: 0; }
+        .instructions li { margin: 8px 0; }
+
+        .selected-wrap { flex: 1; display: none; }
+        .selected-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .selected-table th, .selected-table td { padding: 10px 12px; border-bottom: 1px solid #24242b; }
+        .selected-table th { text-align: left; color: var(--muted); font-weight: 500; }
+        .thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid #2a2a31; }
+        .btn-remove { background: none; border: 1px solid #2a2a31; color: #f87171; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+        .left-actions { padding: 12px 16px; display: flex; gap: 10px; border-top: 1px solid #23232a; }
+        .btn { border: 0; background: #1b1b22; color: var(--text); border: 1px solid #2a2a31; padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: transform .12s ease, border-color .2s ease, background .2s; }
+        .btn:hover { transform: translateY(-1px); border-color: #363645; }
+        .btn-primary { background: linear-gradient(180deg, #6f6ef6, #5a59e6); border-color: #6a6aec; box-shadow: 0 6px 18px rgba(106,106,236,0.35); }
+        .btn-outline { background: transparent; }
+
+        .center-panel { position: relative; display: grid; place-items: center; }
+        .stage { position: relative; width: 720px; height: 720px; display: grid; place-items: center; }
+        .mix-btn {
+            position: absolute; width: 160px; height: 160px; border-radius: 50%;
+            background: radial-gradient(120px 120px at 40% 35%, #ffffff, #d7d5ff 40%, #7c77ff 60%, #4a47e6 85%);
+            border: 6px solid rgba(255,255,255,0.08);
+            box-shadow: 0 30px 60px rgba(88,82,255,0.45), inset 0 2px 10px rgba(255,255,255,0.35);
+            display: grid; place-items: center; color: #0c0d12; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+            cursor: pointer; user-select: none; z-index: 3; transition: transform .2s ease;
+        }
+        .mix-btn:active { transform: scale(0.98); }
+        .mix-glow { position: absolute; width: 420px; height: 420px; border-radius: 50%; filter: blur(40px); background: radial-gradient(closest-side, rgba(155,135,245,0.28), transparent 70%); z-index: 0; }
+
+        .wheel-wrap { position: relative; width: 640px; height: 640px; }
+        .wheel { width: 100%; height: 100%; }
+        .slice { transition: transform .18s ease, filter .2s ease, opacity .2s ease; cursor: pointer; }
+        .slice:hover { filter: brightness(1.05); }
+        .slice.disabled { opacity: 0.35; cursor: not-allowed; }
+        .slice.selected { filter: saturate(1.15) brightness(1.05); }
+        .wheel.spin { animation: spin 1.4s cubic-bezier(.2,.7,.1,1) both; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(520deg); } }
+
+        .label { font-size: 12px; fill: #d7d9df; text-shadow: 0 1px 0 #000; }
+        .badge {
+            font-size: 10px; fill: #0e0f14; paint-order: stroke; stroke: rgba(0,0,0,0.35); stroke-width: 6px;
+        }
+        .thumb-clip { pointer-events: none; }
+
+        .right-panel { padding-bottom: 10px; }
+        .toggle-group { padding: 14px 16px; border-bottom: 1px solid #23232a; }
+        .toggle { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; }
+        .switch { width: 50px; height: 28px; background: #22232b; border-radius: 20px; border: 1px solid #2a2a31; position: relative; cursor: pointer; transition: background .2s ease, border-color .2s ease; }
+        .switch:before { content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #b9bcc6; transition: transform .2s ease; }
+        .switch.on { background: #2a2f46; border-color: #3c3f55; }
+        .switch.on:before { transform: translateX(22px); background: #a9b0ff; }
+
+        .filters-panel { position: absolute; right: 24px; top: 24px; width: 420px; max-height: 82vh; display: none; flex-direction: column; background: #141418; border: 1px solid #2a2a31; border-radius: 14px; overflow: hidden; z-index: 10; box-shadow: 0 30px 80px rgba(0,0,0,0.55); }
+        .filters-header { padding: 12px 14px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid #23232a; }
+        .filters-header select, .filters-header input { flex: 1; background: #0f0f14; border: 1px solid #2a2a31; color: var(--text); border-radius: 10px; padding: 10px 12px; }
+        .filters-grid { padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow: auto; }
+        .card { background: #0f0f14; border: 1px solid #2a2a31; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+        .card img { width: 100%; height: 120px; object-fit: cover; }
+        .card .meta { padding: 8px 10px; font-size: 12px; }
+        .card .meta .name { font-weight: 600; }
+        .card button { margin: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid #3a3a40; background: #1a1a22; color: var(--text); cursor: pointer; }
+
+        .flip { position: relative; flex: 1; perspective: 1200px; }
+        .flip-inner { position: absolute; inset: 0; transition: transform .8s cubic-bezier(.2,.7,.1,1); transform-style: preserve-3d; }
+        .flip.show-preview .flip-inner { transform: rotateY(180deg); }
+        .flip-face { position: absolute; inset: 0; backface-visibility: hidden; display: flex; flex-direction: column; }
+        .flip-face.back { transform: rotateY(180deg); }
+        .preview-grid { padding: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow: auto; }
+        .preview-grid img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid #2a2a31; }
+
+        .categories-legend { position: absolute; inset: 0; pointer-events: none; }
+        .legend-item { position: absolute; font-size: 12px; color: #cfd2d9; background: rgba(15,15,20,0.5); backdrop-filter: blur(4px); padding: 4px 8px; border: 1px solid #2a2a31; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -50%); }
+
+        .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(30px); background: #0f0f14; border: 1px solid #2a2a31; color: #dfe2ea; padding: 10px 14px; border-radius: 10px; opacity: 0; transition: all .3s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0px); }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="panel left-panel">
+            <div class="panel-header">
+                <div class="brand"><strong>X</strong> Outfit Mixer</div>
+                <div class="muted">example.com</div>
+            </div>
+            <div class="flip" id="leftFlip">
+                <div class="flip-inner">
+                    <div class="flip-face front">
+                        <div class="instructions" id="instructions">
+                            <h3>How to play</h3>
+                            <ol>
+                                <li>Hover around the wheel and click a slice to choose an item.</li>
+                                <li>Use the search and category filter to refine results.</li>
+                                <li>Pick a few, then hit Mix — we will complete the look for you.</li>
+                                <li>Preview your outfit when ready.</li>
+                            </ol>
+                        </div>
+                        <div class="selected-wrap" id="selectedWrap">
+                            <table class="selected-table" id="selectedTable">
+                                <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <div class="left-actions">
+                                <button class="btn btn-outline" id="btnClear">Clear</button>
+                                <button class="btn btn-primary" id="btnPreview">Preview</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flip-face back">
+                        <div class="panel-header" style="border-bottom: 1px solid #23232a;">
+                            <div class="brand">Outfit Preview</div>
+                            <button class="btn btn-outline" id="btnBack">Back</button>
+                        </div>
+                        <div class="preview-grid" id="previewGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel center-panel">
+            <div class="stage">
+                <div class="mix-glow"></div>
+                <div class="mix-btn" id="mixBtn">Mix</div>
+                <div class="wheel-wrap">
+                    <svg class="wheel" id="wheel" viewBox="-320 -320 640 640" aria-label="Outfit wheel"></svg>
+                    <div class="categories-legend" id="legend"></div>
+                </div>
+            </div>
+            <div class="filters-panel" id="filtersPanel">
+                <div class="filters-header">
+                    <select id="categorySelect"></select>
+                    <input id="searchInput" placeholder="Search keywords…" />
+                    <button class="btn" id="closeFilters">Close</button>
+                </div>
+                <div class="filters-grid" id="resultsGrid"></div>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="panel-header">
+                <div class="brand">Filters</div>
+            </div>
+            <div class="toggle-group">
+                <div class="toggle"><span class="muted">Gender: Female</span><div class="switch on" data-flag="genderF"></div></div>
+                <div class="toggle"><span class="muted">Gender: Male</span><div class="switch" data-flag="genderM"></div></div>
+                <div class="muted" style="font-size: 12px; margin-top: 6px;">Note: Gender toggles are for demo and do not filter items.</div>
+            </div>
+            <div class="toggle-group" id="slotsToggles">
+                <div class="muted" style="margin-bottom: 6px;">Enable/Disable slots</div>
+                <!-- Filled by JS -->
+            </div>
+            <div style="padding: 14px 16px;">
+                <button class="btn" id="btnOpenAny">Open Selector</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Mixed your outfit ✨</div>
+
+    <!-- Embedded catalog data to keep this as a single-file artifact -->
+    <script id="catalogData" type="application/json">
+{
+  "belts": [
+    { "name": "Classic Leather Belt", "brand": "Brand A", "image_path": "images/belts/belt1.jpg" },
+    { "name": "Woven Canvas Belt", "brand": "Brand B", "image_path": "images/belts/belt2.jpg" },
+    { "name": "Reversible Belt", "brand": "Brand C", "image_path": "images/belts/belt3.jpg" },
+    { "name": "Chain Link Belt", "brand": "Brand D", "image_path": "images/belts/belt4.jpg" },
+    { "name": "Braided Leather Belt", "brand": "Brand E", "image_path": "images/belts/belt5.jpg" },
+    { "name": "Designer Buckle Belt", "brand": "Brand F", "image_path": "images/belts/belt6.jpg" }
+  ],
+  "bottoms": [
+    { "name": "Floral Midi Dress", "brand": "Brand G", "image_path": "images/bottoms/dress1.jpg" },
+    { "name": "Wrap Dress", "brand": "Brand H", "image_path": "images/bottoms/dress2.jpg" },
+    { "name": "Cocktail Dress", "brand": "Brand A", "image_path": "images/bottoms/dress3.jpg" },
+    { "name": "Slim Fit Jeans", "brand": "Brand B", "image_path": "images/bottoms/jeans1.jpg" },
+    { "name": "High-Waisted Jeans", "brand": "Brand C", "image_path": "images/bottoms/jeans2.jpg" },
+    { "name": "Distressed Denim", "brand": "Brand D", "image_path": "images/bottoms/jeans3.jpg" },
+    { "name": "Wide Leg Jeans", "brand": "Brand E", "image_path": "images/bottoms/jeans4.jpg" },
+    { "name": "Pleated Midi Skirt", "brand": "Brand F", "image_path": "images/bottoms/skirt1.jpg" },
+    { "name": "A-Line Skirt", "brand": "Brand G", "image_path": "images/bottoms/skirt2.jpg" },
+    { "name": "Pencil Skirt", "brand": "Brand H", "image_path": "images/bottoms/skirt3.jpg" }
+  ],
+  "earrings": [
+    { "name": "Pearl Drop Earrings", "brand": "Brand A", "image_path": "images/earrings/earrings1.jpg" },
+    { "name": "Gold Hoop Earrings", "brand": "Brand B", "image_path": "images/earrings/earrings2.jpg" },
+    { "name": "Crystal Stud Earrings", "brand": "Brand C", "image_path": "images/earrings/earrings3.jpg" },
+    { "name": "Chandelier Earrings", "brand": "Brand D", "image_path": "images/earrings/earrings4.jpg" },
+    { "name": "Minimalist Bar Earrings", "brand": "Brand E", "image_path": "images/earrings/earrings5.jpg" }
+  ],
+  "gloves": [
+    { "name": "Leather Driving Gloves", "brand": "Brand F", "image_path": "images/gloves/gloves1.jpg" },
+    { "name": "Cashmere Gloves", "brand": "Brand G", "image_path": "images/gloves/gloves2.jpg" },
+    { "name": "Fingerless Gloves", "brand": "Brand H", "image_path": "images/gloves/gloves3.jpg" },
+    { "name": "Winter Wool Gloves", "brand": "Brand A", "image_path": "images/gloves/gloves4.jpg" },
+    { "name": "Evening Opera Gloves", "brand": "Brand B", "image_path": "images/gloves/gloves5.jpg" },
+    { "name": "Touchscreen Gloves", "brand": "Brand C", "image_path": "images/gloves/gloves6.jpg" }
+  ],
+  "handbags": [
+    { "name": "Tote Bag", "brand": "Brand D", "image_path": "images/handbags/handbag1.jpg" },
+    { "name": "Crossbody Bag", "brand": "Brand E", "image_path": "images/handbags/handbag2.jpg" },
+    { "name": "Clutch Purse", "brand": "Brand F", "image_path": "images/handbags/handbag3.jpg" },
+    { "name": "Shoulder Bag", "brand": "Brand G", "image_path": "images/handbags/handbag4.jpg" },
+    { "name": "Bucket Bag", "brand": "Brand H", "image_path": "images/handbags/handbag5.jpg" },
+    { "name": "Satchel Bag", "brand": "Brand A", "image_path": "images/handbags/handbag6.jpg" },
+    { "name": "Hobo Bag", "brand": "Brand B", "image_path": "images/handbags/handbag7.jpg" }
+  ],
+  "hats": [
+    { "name": "Fedora Hat", "brand": "Brand C", "image_path": "images/hats/hat1.jpg" },
+    { "name": "Baseball Cap", "brand": "Brand D", "image_path": "images/hats/hat2.jpg" },
+    { "name": "Wide Brim Sun Hat", "brand": "Brand E", "image_path": "images/hats/hat3.jpg" },
+    { "name": "Beanie", "brand": "Brand F", "image_path": "images/hats/hat4.jpg" },
+    { "name": "Beret", "brand": "Brand G", "image_path": "images/hats/hat5.jpg" }
+  ],
+  "necklaces": [
+    { "name": "Pearl Strand Necklace", "brand": "Brand H", "image_path": "images/necklaces/necklace1.jpg" },
+    { "name": "Gold Chain Necklace", "brand": "Brand A", "image_path": "images/necklaces/necklace2.jpg" },
+    { "name": "Pendant Necklace", "brand": "Brand B", "image_path": "images/necklaces/necklace3.jpg" },
+    { "name": "Choker Necklace", "brand": "Brand C", "image_path": "images/necklaces/necklace4.jpg" }
+  ],
+  "scaves": [
+    { "name": "Silk Scarf", "brand": "Brand D", "image_path": "images/scaves/scarf1.jpg" },
+    { "name": "Cashmere Scarf", "brand": "Brand E", "image_path": "images/scaves/scarf2.jpg" },
+    { "name": "Infinity Scarf", "brand": "Brand F", "image_path": "images/scaves/scarf3.jpg" },
+    { "name": "Printed Square Scarf", "brand": "Brand G", "image_path": "images/scaves/scarf4.jpg" },
+    { "name": "Wool Blanket Scarf", "brand": "Brand H", "image_path": "images/scaves/scarf5.jpg" },
+    { "name": "Lightweight Summer Scarf", "brand": "Brand A", "image_path": "images/scaves/scarf6.jpg" },
+    { "name": "Fringed Wrap Scarf", "brand": "Brand B", "image_path": "images/scaves/scarf7.jpg" }
+  ],
+  "shoes": [
+    { "name": "Leather Oxford Shoes", "brand": "Brand C", "image_path": "images/shoes/shoes1.jpg" },
+    { "name": "High-Top Sneakers", "brand": "Brand D", "image_path": "images/shoes/shoes2.jpg" },
+    { "name": "Ankle Boots", "brand": "Brand E", "image_path": "images/shoes/shoes3.jpg" },
+    { "name": "Running Shoes", "brand": "Brand F", "image_path": "images/shoes/shoes4.jpg" }
+  ],
+  "sunglasses": [
+    { "name": "Aviator Sunglasses", "brand": "Brand G", "image_path": "images/sunglasses/sunglassess1.jpg" },
+    { "name": "Cat Eye Sunglasses", "brand": "Brand H", "image_path": "images/sunglasses/sunglassess2.jpg" },
+    { "name": "Round Frame Sunglasses", "brand": "Brand A", "image_path": "images/sunglasses/sunglassess3.jpg" },
+    { "name": "Wayfarer Sunglasses", "brand": "Brand B", "image_path": "images/sunglasses/sunglassess4.jpg" },
+    { "name": "Sport Sunglasses", "brand": "Brand C", "image_path": "images/sunglasses/sunglassess5.jpg" }
+  ],
+  "tops": [
+    { "name": "Wool Overcoat", "brand": "Brand D", "image_path": "images/tops/coat1.jpg" },
+    { "name": "Trench Coat", "brand": "Brand E", "image_path": "images/tops/coat2.jpg" },
+    { "name": "Puffer Coat", "brand": "Brand F", "image_path": "images/tops/coat3.jpg" },
+    { "name": "Maxi Dress", "brand": "Brand G", "image_path": "images/tops/dress1.png" },
+    { "name": "Shift Dress", "brand": "Brand H", "image_path": "images/tops/dress2.png" },
+    { "name": "Evening Gown", "brand": "Brand A", "image_path": "images/tops/dress7.jpg" },
+    { "name": "Denim Jacket", "brand": "Brand B", "image_path": "images/tops/jacket1.jpg" },
+    { "name": "Leather Jacket", "brand": "Brand C", "image_path": "images/tops/jacket2.jpg" },
+    { "name": "Bomber Jacket", "brand": "Brand D", "image_path": "images/tops/jacket3.jpg" },
+    { "name": "Cotton T-Shirt", "brand": "Brand E", "image_path": "images/tops/top1.png" },
+    { "name": "Silk Blouse", "brand": "Brand F", "image_path": "images/tops/top2.png" },
+    { "name": "Knit Sweater", "brand": "Brand G", "image_path": "images/tops/top3.png" },
+    { "name": "Linen Shirt", "brand": "Brand H", "image_path": "images/tops/top4.png" }
+  ],
+  "watches": [
+    { "name": "Classic Analog Watch", "brand": "Brand A", "image_path": "images/watches/watch1.jpg" },
+    { "name": "Digital Sport Watch", "brand": "Brand B", "image_path": "images/watches/watch2.jpg" },
+    { "name": "Chronograph Watch", "brand": "Brand C", "image_path": "images/watches/watch3.jpg" },
+    { "name": "Smart Watch", "brand": "Brand D", "image_path": "images/watches/watch4.jpg" },
+    { "name": "Dress Watch", "brand": "Brand E", "image_path": "images/watches/watch5.jpg" },
+    { "name": "Dive Watch", "brand": "Brand F", "image_path": "images/watches/watch6.jpg" }
+  ]
+}
+    </script>
+
+    <script>
+    const state = {
+        catalog: {},
+        categories: [],
+        keyToLabel: {
+            belts: 'Belts',
+            bottoms: 'Bottoms',
+            earrings: 'Earrings',
+            gloves: 'Gloves',
+            handbags: 'Handbags',
+            hats: 'Hats',
+            necklaces: 'Necklaces',
+            scaves: 'Scarves',
+            shoes: 'Shoes',
+            sunglasses: 'Sunglasses',
+            tops: 'Tops',
+            watches: 'Watches'
+        },
+        selectedByCategory: {},
+        disabledSlots: new Set(),
+        activeSlice: null
+    };
+
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    async function loadCatalog() {
+        try {
+            const embedded = document.getElementById('catalogData');
+            if (embedded && embedded.textContent.trim()) {
+                state.catalog = JSON.parse(embedded.textContent);
+            } else {
+                // Fallback to fetch if someone removes the embedded data
+                let res = await fetch('product_catalog.json');
+                if (!res.ok) res = await fetch('/product_catalog.json');
+                state.catalog = await res.json();
+            }
+        } catch (err) {
+            console.error('Failed to load catalog', err);
+            toast('Failed to load catalog.');
+            state.catalog = {};
+        }
+        state.categories = Object.keys(state.catalog);
+        if (!state.categories.length) {
+            // Graceful empty-state UI
+            document.getElementById('wheel').innerHTML = '';
+            document.getElementById('legend').innerHTML = '';
+            document.getElementById('slotsToggles').innerHTML = '<div class="muted">No categories loaded</div>';
+            return;
+        }
+        initUI();
+    }
+
+    function initUI() {
+        buildCategorySelect();
+        buildWheel();
+        buildLegend();
+        buildSlotToggles();
+        bindGlobalActions();
+    }
+
+    function buildCategorySelect() {
+        const sel = document.getElementById('categorySelect');
+        sel.innerHTML = '';
+        state.categories.forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k; opt.textContent = state.keyToLabel[k] || k;
+            sel.appendChild(opt);
+        });
+    }
+
+    function pol2cart(r, a) { return { x: r * Math.cos(a), y: r * Math.sin(a) }; }
+    function arcPath(cx, cy, r, start, end) {
+        const s = pol2cart(r, start); const e = pol2cart(r, end);
+        const large = end - start <= Math.PI ? 0 : 1;
+        return `M ${cx} ${cy} L ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y} Z`;
+    }
+
+    function buildWheel() {
+        const svg = document.getElementById('wheel');
+        svg.innerHTML = '';
+        const n = state.categories.length;
+        const radius = 300; const inner = 80;
+        const colors = [
+            '#8b5cf6','#22d3ee','#f472b6','#34d399','#f59e0b','#60a5fa','#c084fc','#4ade80','#f97316','#a78bfa','#2dd4bf','#ef4444'
+        ];
+
+        state.categories.forEach((cat, i) => {
+            const start = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const end = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
+            const mid = (start + end) / 2;
+            const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            grp.classList.add('slice');
+            grp.dataset.category = cat;
+
+            const pathOuter = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathOuter.setAttribute('d', arcPath(0, 0, radius, start, end));
+            pathOuter.setAttribute('fill', colors[i % colors.length]);
+            pathOuter.setAttribute('opacity', '0.9');
+
+            const pathInner = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathInner.setAttribute('d', arcPath(0, 0, inner, start, end));
+            pathInner.setAttribute('fill', '#0f0f14');
+
+            const thumbClipId = `clip-${cat}`;
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            clip.setAttribute('id', thumbClipId);
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const thumbCenter = pol2cart((radius + inner) / 2.2, mid);
+            circle.setAttribute('cx', thumbCenter.x);
+            circle.setAttribute('cy', thumbCenter.y);
+            circle.setAttribute('r', '42');
+            clip.appendChild(circle); defs.appendChild(clip);
+
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            img.setAttribute('x', thumbCenter.x - 45);
+            img.setAttribute('y', thumbCenter.y - 45);
+            img.setAttribute('width', '90');
+            img.setAttribute('height', '90');
+            img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            img.setAttribute('clip-path', `url(#${thumbClipId})`);
+            img.classList.add('thumb-clip');
+
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            const labelPos = pol2cart(radius + 22, mid);
+            label.setAttribute('x', labelPos.x);
+            label.setAttribute('y', labelPos.y);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('alignment-baseline', 'middle');
+            label.setAttribute('class', 'label');
+            label.textContent = state.keyToLabel[cat] || cat;
+
+            const badge = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            const badgePos = pol2cart(radius - 24, mid);
+            badge.setAttribute('x', badgePos.x);
+            badge.setAttribute('y', badgePos.y);
+            badge.setAttribute('text-anchor', 'middle');
+            badge.setAttribute('alignment-baseline', 'middle');
+            badge.setAttribute('class', 'badge');
+            badge.textContent = '＋';
+
+            grp.appendChild(defs);
+            grp.appendChild(pathOuter);
+            grp.appendChild(pathInner);
+            grp.appendChild(img);
+            grp.appendChild(label);
+            grp.appendChild(badge);
+
+            const pop = 10; const dx = Math.cos(mid) * pop; const dy = Math.sin(mid) * pop;
+            grp.addEventListener('mouseenter', () => {
+                if (state.disabledSlots.has(cat)) return;
+                grp.style.transform = `translate(${dx}px, ${dy}px)`;
+            });
+            grp.addEventListener('mouseleave', () => { grp.style.transform = 'translate(0, 0)'; });
+            grp.addEventListener('click', () => {
+                if (state.disabledSlots.has(cat)) return;
+                state.activeSlice = cat;
+                openSelector(cat);
+            });
+
+            svg.appendChild(grp);
+        });
+    }
+
+    function buildLegend() {
+        const legend = document.getElementById('legend');
+        legend.innerHTML = '';
+        const box = legend.parentElement.getBoundingClientRect();
+        const cx = box.width / 2; const cy = box.height / 2;
+        const n = state.categories.length; const radius = 330;
+        state.categories.forEach((cat, i) => {
+            const start = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const end = ((i + 1) / n) * Math.PI * 2 - Math.PI / 2;
+            const mid = (start + end) / 2;
+            const p = pol2cart(radius, mid);
+            const div = document.createElement('div');
+            div.className = 'legend-item';
+            div.style.left = (cx + p.x) + 'px';
+            div.style.top = (cy + p.y) + 'px';
+            div.textContent = state.keyToLabel[cat] || cat;
+            legend.appendChild(div);
+        });
+    }
+
+    function buildSlotToggles() {
+        const wrap = document.getElementById('slotsToggles');
+        wrap.innerHTML = '';
+        state.categories.forEach(cat => {
+            const row = document.createElement('div'); row.className = 'toggle';
+            const label = document.createElement('span'); label.className = 'muted'; label.textContent = (state.keyToLabel[cat] || cat);
+            const sw = document.createElement('div'); sw.className = 'switch on';
+            sw.dataset.slot = cat; sw.addEventListener('click', () => toggleSlot(cat, sw));
+            row.appendChild(label); row.appendChild(sw); wrap.appendChild(row);
+        });
+    }
+
+    function toggleSlot(cat, el) {
+        const svg = document.getElementById('wheel');
+        const slice = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === cat);
+        const enabled = el.classList.toggle('on');
+        if (enabled) {
+            state.disabledSlots.delete(cat);
+            if (slice) slice.classList.remove('disabled');
+        } else {
+            state.disabledSlots.add(cat);
+            if (slice) slice.classList.add('disabled');
+        }
+    }
+
+    function bindGlobalActions() {
+        document.getElementById('btnOpenAny').addEventListener('click', () => {
+            const first = state.categories[0];
+            state.activeSlice = first;
+            openSelector(first);
+        });
+        document.getElementById('closeFilters').addEventListener('click', closeSelector);
+        document.getElementById('categorySelect').addEventListener('change', e => renderResults(e.target.value, document.getElementById('searchInput').value));
+        document.getElementById('searchInput').addEventListener('input', e => renderResults(document.getElementById('categorySelect').value, e.target.value));
+        document.getElementById('mixBtn').addEventListener('click', onMix);
+        document.getElementById('btnPreview').addEventListener('click', () => togglePreview(true));
+        document.getElementById('btnBack').addEventListener('click', () => togglePreview(false));
+        document.getElementById('btnClear').addEventListener('click', clearAll);
+        window.addEventListener('resize', buildLegend);
+    }
+
+    function openSelector(category) {
+        const panel = document.getElementById('filtersPanel');
+        const sel = document.getElementById('categorySelect');
+        sel.value = category || 'tops';
+        document.getElementById('searchInput').value = '';
+        renderResults(sel.value, '');
+        panel.style.display = 'flex';
+        panel.animate([ { transform: 'translateY(-10px)', opacity: 0 }, { transform: 'translateY(0px)', opacity: 1 } ], { duration: 180, easing: 'ease-out' });
+    }
+    function closeSelector() {
+        const panel = document.getElementById('filtersPanel');
+        panel.animate([ { transform: 'translateY(0px)', opacity: 1 }, { transform: 'translateY(-10px)', opacity: 0 } ], { duration: 140, easing: 'ease-in' }).onfinish = () => {
+            panel.style.display = 'none';
+        };
+    }
+
+    function renderResults(category, keyword) {
+        const grid = document.getElementById('resultsGrid');
+        grid.innerHTML = '';
+        const list = state.catalog[category] || [];
+        const filtered = list.filter(it => !keyword || it.name.toLowerCase().includes(keyword.toLowerCase()) || it.brand.toLowerCase().includes(keyword.toLowerCase()));
+        filtered.forEach(item => {
+            const card = document.createElement('div'); card.className = 'card';
+            const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name;
+            const meta = document.createElement('div'); meta.className = 'meta';
+            const name = document.createElement('div'); name.className = 'name'; name.textContent = item.name;
+            const brand = document.createElement('div'); brand.className = 'muted'; brand.textContent = item.brand;
+            const btn = document.createElement('button'); btn.textContent = 'Select'; btn.addEventListener('click', () => selectItem(category, item));
+            meta.appendChild(name); meta.appendChild(brand);
+            card.appendChild(img); card.appendChild(meta); card.appendChild(btn);
+            grid.appendChild(card);
+        });
+    }
+
+    function selectItem(category, item) {
+        state.selectedByCategory[category] = item;
+        applySelectionToWheel(category, item);
+        renderSelectedTable();
+        closeSelector();
+        showSelectedUI();
+    }
+
+    function applySelectionToWheel(category, item) {
+        const svg = document.getElementById('wheel');
+        const grp = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === category);
+        if (grp) {
+            const img = grp.querySelector('image');
+            img.setAttribute('href', item.image_path);
+            grp.classList.add('selected');
+        }
+    }
+
+    function renderSelectedTable() {
+        const tbody = document.querySelector('#selectedTable tbody');
+        tbody.innerHTML = '';
+        Object.entries(state.selectedByCategory).forEach(([cat, item]) => {
+            if (!item) return;
+            const tr = document.createElement('tr');
+            const tdItem = document.createElement('td');
+            const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name; img.className = 'thumb';
+            const text = document.createElement('div'); text.textContent = item.name;
+            const box = document.createElement('div'); box.style.display = 'flex'; box.style.alignItems = 'center'; box.style.gap = '10px';
+            box.appendChild(img); box.appendChild(text); tdItem.appendChild(box);
+
+            const tdCat = document.createElement('td'); tdCat.textContent = state.keyToLabel[cat] || cat;
+            const tdAct = document.createElement('td');
+            const btn = document.createElement('button'); btn.className = 'btn-remove'; btn.textContent = 'Remove'; btn.addEventListener('click', () => removeItem(cat));
+            tdAct.appendChild(btn);
+
+            tr.appendChild(tdItem); tr.appendChild(tdCat); tr.appendChild(tdAct);
+            tbody.appendChild(tr);
+        });
+    }
+
+    function removeItem(category) {
+        delete state.selectedByCategory[category];
+        const svg = document.getElementById('wheel');
+        const grp = Array.from(svg.querySelectorAll('.slice')).find(g => g.dataset.category === category);
+        if (grp) {
+            const img = grp.querySelector('image');
+            img.removeAttribute('href');
+            grp.classList.remove('selected');
+        }
+        renderSelectedTable();
+        if (Object.keys(state.selectedByCategory).length === 0) hideSelectedUI();
+    }
+
+    function showSelectedUI() {
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('selectedWrap').style.display = 'block';
+    }
+    function hideSelectedUI() {
+        document.getElementById('instructions').style.display = 'block';
+        document.getElementById('selectedWrap').style.display = 'none';
+    }
+
+    function togglePreview(show) {
+        const flip = document.getElementById('leftFlip');
+        if (show) {
+            const grid = document.getElementById('previewGrid');
+            grid.innerHTML = '';
+            Object.values(state.selectedByCategory).forEach(item => {
+                if (!item) return;
+                const img = document.createElement('img'); img.src = item.image_path; img.alt = item.name; grid.appendChild(img);
+            });
+            flip.classList.add('show-preview');
+        } else {
+            flip.classList.remove('show-preview');
+        }
+    }
+
+    function onMix() {
+        const wheel = document.getElementById('wheel');
+        wheel.classList.remove('spin'); // restart animation
+        // force reflow
+        void wheel.offsetWidth;
+        wheel.classList.add('spin');
+
+        // Fill remaining categories with random picks (skipping disabled)
+        state.categories.forEach(cat => {
+            if (state.disabledSlots.has(cat)) return;
+            if (!state.selectedByCategory[cat]) {
+                const list = state.catalog[cat] || [];
+                if (list.length) {
+                    const choice = pickRandom(list);
+                    state.selectedByCategory[cat] = choice;
+                    applySelectionToWheel(cat, choice);
+                }
+            }
+        });
+        renderSelectedTable();
+        showSelectedUI();
+        toast('Mixed your outfit ✨');
+    }
+
+    function clearAll() {
+        state.selectedByCategory = {};
+        const svg = document.getElementById('wheel');
+        svg.querySelectorAll('.slice').forEach(grp => {
+            grp.classList.remove('selected');
+            const img = grp.querySelector('image');
+            if (img) img.removeAttribute('href');
+        });
+        renderSelectedTable();
+        hideSelectedUI();
+    }
+
+    function toast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 1600);
+    }
+
+    loadCatalog();
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Outfit Mixer — X</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: rgba(255, 255, 255, 0.06);
+      --panel-strong: rgba(255, 255, 255, 0.12);
+      --text: #e9ecf1;
+      --muted: #a6adbb;
+      --accent-1: #6e52ff;
+      --accent-2: #ff7fd1;
+      --accent-3: #22d1ee;
+      --glow: 0 10px 30px rgba(110, 82, 255, 0.35), 0 0 80px rgba(255, 127, 209, 0.2);
+      --radius: 16px;
+      --shadow-1: 0 1px 0 rgba(255,255,255,0.08) inset,
+                  0 10px 30px rgba(0,0,0,0.35),
+                  0 20px 60px rgba(0,0,0,0.35);
+      --brand-gradient: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: radial-gradient(1200px 800px at 90% -10%, rgba(110,82,255,0.12), transparent),
+                  radial-gradient(1000px 700px at -20% 120%, rgba(34,209,238,0.10), transparent),
+                  var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      margin: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px clamp(16px, 4vw, 40px);
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(to bottom, rgba(11,13,16,0.8), rgba(11,13,16,0));
+      z-index: 20;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .brand-badge {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: conic-gradient(from 0deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+      box-shadow: var(--glow);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: clamp(16px, 3vw, 28px);
+      padding: 4px clamp(16px, 4vw, 40px) 40px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Left: selection summary */
+    .summary {
+      padding: 20px;
+      position: sticky;
+      top: 88px;
+      height: fit-content;
+      max-height: calc(100vh - 120px);
+      overflow: auto;
+    }
+    .summary h2 {
+      margin: 6px 0 14px;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+    .table thead th {
+      text-align: left;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 0 10px 8px;
+    }
+    .table tbody tr {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25) inset;
+    }
+    .table tbody td {
+      padding: 10px;
+      vertical-align: middle;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 0.8fr 60px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .chip .dot { width: 10px; height: 10px; border-radius: 999px; box-shadow: 0 0 0 2px rgba(255,255,255,0.15) inset; }
+    .chip-ghost { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+    .thumb {
+      width: 28px; height: 28px; border-radius: 8px; overflow: hidden; flex: none;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .row-actions {
+      display: flex; gap: 6px; justify-content: flex-end;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 8px 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      cursor: pointer; transition: transform .12s ease, background .2s ease, border .2s ease, box-shadow .2s ease;
+      font-weight: 600; font-size: 12px; letter-spacing: .02em; text-transform: uppercase;
+    }
+    .btn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.1); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary {
+      background: var(--brand-gradient);
+      border: none;
+      box-shadow: var(--glow);
+    }
+    .btn-danger { background: rgba(239,68,68,0.16); border-color: rgba(239,68,68,0.5); }
+
+    .total {
+      margin-top: 16px; padding-top: 12px;
+      border-top: 1px dashed rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: space-between;
+      font-weight: 700; letter-spacing: 0.02em;
+    }
+
+    /* Right: wheel */
+    .studio { position: relative; }
+    .stage {
+      position: relative;
+      display: grid; place-items: center;
+      min-height: 620px;
+    }
+
+    .wheel-wrap {
+      position: relative;
+      width: min(80vw, 560px);
+      aspect-ratio: 1 / 1;
+    }
+
+    .wheel {
+      width: 100%; height: 100%;
+      filter: drop-shadow(0 14px 50px rgba(0,0,0,0.6));
+    }
+
+    .wheel-ring {
+      position: absolute; inset: -14px;
+      pointer-events: none;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(110,82,255,0.16), rgba(255,127,209,0.10), rgba(34,209,238,0.12), rgba(110,82,255,0.16));
+      filter: blur(10px) saturate(1.2);
+    }
+
+    .slice {
+      cursor: pointer;
+      transition: transform 200ms ease, filter 200ms ease;
+    }
+    .slice:hover { filter: brightness(1.1) saturate(1.1); }
+    .slice.selected path { stroke: rgba(255,255,255,0.8); stroke-width: 2; }
+
+    .slice-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; fill: var(--text);
+      opacity: 0.95;
+      paint-order: stroke; stroke: rgba(11,13,16,0.7); stroke-width: 5px; stroke-linejoin: round;
+    }
+
+    .center-ui { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+    .mix-btn {
+      pointer-events: auto;
+      width: clamp(110px, 20vw, 160px); aspect-ratio: 1 / 1; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(255,255,255,0.18), rgba(255,255,255,0.04)), var(--brand-gradient);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), var(--glow);
+      border: none; color: white; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+      font-size: clamp(14px, 2vw, 18px);
+      cursor: pointer; transition: transform .2s ease, box-shadow .3s ease, filter .2s ease;
+      position: relative; overflow: hidden;
+    }
+    .mix-btn::after {
+      content: ""; position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), transparent 45%);
+      filter: blur(10px);
+      mix-blend-mode: soft-light;
+    }
+    .mix-btn:hover { transform: translateY(-2px) scale(1.02); }
+    .mix-btn:active { transform: translateY(0) scale(0.98); }
+
+    .wheel-spinning { animation: spin 1200ms cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(720deg); } }
+
+    .thumb-icon {
+      pointer-events: none;
+      transform-box: fill-box; transform-origin: center;
+      filter: drop-shadow(0 4px 14px rgba(0,0,0,0.6));
+    }
+
+    /* Picker side panel */
+    .picker {
+      position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 92vw);
+      background: linear-gradient(180deg, rgba(10,12,15,0.9), rgba(10,12,15,0.82));
+      border-left: 1px solid rgba(255,255,255,0.1);
+      box-shadow: -40px 0 120px rgba(0,0,0,0.5);
+      transform: translateX(100%);
+      transition: transform 260ms cubic-bezier(.2,.8,.2,1);
+      z-index: 40;
+      display: grid; grid-template-rows: auto auto 1fr;
+      backdrop-filter: blur(10px);
+    }
+    .picker.open { transform: translateX(0); }
+    .picker-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 18px 8px; }
+    .picker-title { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+    .picker-sub { color: var(--muted); font-size: 12px; }
+    .picker-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .filter { padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; font-weight: 700; letter-spacing: 0.04em; font-size: 12px; }
+    .filter.active { background: rgba(110,82,255,0.25); border-color: rgba(110,82,255,0.8); box-shadow: 0 8px 30px rgba(110,82,255,0.3) inset; }
+    .picker-grid { padding: 16px; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid; grid-template-columns: 84px 1fr; gap: 12px; align-items: center;
+      transition: transform .15s ease, background .2s ease, border .2s ease, box-shadow .2s ease;
+      cursor: pointer;
+    }
+    .card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.08); box-shadow: 0 14px 40px rgba(0,0,0,0.35); }
+    .card .price { font-weight: 800; letter-spacing: 0.06em; }
+    .card .meta { color: var(--muted); font-size: 12px; }
+    .card .img { width: 84px; height: 84px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); }
+
+    .clear-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+
+    /* Category keys near wheel */
+    .keys { position: absolute; inset: 0; pointer-events: none; }
+    .key-label { position: absolute; transform: translate(-50%, -50%); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; text-shadow: 0 1px 0 rgba(0,0,0,0.4); }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+      .app { grid-template-columns: 1fr; }
+      .summary { position: static; max-height: none; }
+      .stage { min-height: 520px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-badge"></div>
+      <div>X — Outfit Mixer</div>
+    </div>
+    <div class="brand" style="gap:10px; opacity:.9">
+      <span style="font-weight:600; letter-spacing:.06em;">Find your look</span>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" fill="url(#g)"/><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6e52ff"/><stop offset="1" stop-color="#ff7fd1"/></linearGradient></defs></svg>
+    </div>
+  </header>
+
+  <main class="app">
+    <!-- Left: Selection Summary -->
+    <section class="panel summary" aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Your Selection</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Item</th>
+            <th>Price</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="summary-body">
+        </tbody>
+      </table>
+      <div class="total">
+        <div>Total</div>
+        <div id="total-price">$0</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn" id="clear-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Clear</button>
+        <button class="btn btn-primary" id="randomize-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 21H3V17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21L10 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 3H21V7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3L14 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Surprise Me</button>
+      </div>
+    </section>
+
+    <!-- Right: Wheel Studio -->
+    <section class="panel studio">
+      <div class="stage">
+        <div class="wheel-wrap">
+          <div class="wheel-ring"></div>
+          <svg id="wheel" class="wheel" viewBox="0 0 600 600" role="img" aria-label="Outfit Mixer Wheel">
+            <defs>
+              <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feOffset dx="0" dy="2"/>
+                <feGaussianBlur stdDeviation="6" result="offset-blur"/>
+                <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+                <feFlood flood-color="#000" flood-opacity="0.4" result="color"/>
+                <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+                <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+              </filter>
+            </defs>
+            <g id="slices"></g>
+            <g id="thumbs"></g>
+            <g id="labels"></g>
+          </svg>
+          <div class="keys" id="keys"></div>
+          <div class="center-ui">
+            <button id="mix-btn" class="mix-btn">Mix</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Picker Panel -->
+  <aside id="picker" class="picker" aria-hidden="true">
+    <div class="picker-header">
+      <div>
+        <div class="picker-title" id="picker-title">Choose Item</div>
+        <div class="picker-sub" id="picker-sub"></div>
+      </div>
+      <button class="btn" id="picker-close">Close</button>
+    </div>
+    <div class="picker-filters" id="picker-filters"></div>
+    <div class="picker-grid" id="picker-grid"></div>
+  </aside>
+
+  <script>
+    ;(() => {
+      const categories = [
+        { id: 'tops', label: 'Tops' },
+        { id: 'bottoms', label: 'Bottoms' },
+        { id: 'sunglasses', label: 'Sunglasses' },
+        { id: 'shoes', label: 'Shoes' },
+        { id: 'accessory1', label: 'Accessory I', isAccessory: true },
+        { id: 'accessory2', label: 'Accessory II', isAccessory: true },
+        { id: 'accessory3', label: 'Accessory III', isAccessory: true },
+      ]
+
+      const accessoryTypes = [
+        'Earrings','Necklaces','Ties','Gloves','Belts','Handbags','Watches'
+      ]
+
+      const palettes = ['Monochrome','Earth','Pastel','Vibrant','Neutral']
+
+      const wheelCfg = {
+        cx: 300, cy: 300, r: 260,
+      }
+
+      // UI toggles for label rendering
+      const uiCfg = {
+        showSliceLabels: true,           // SVG text on the ring
+        showExternalKeyLabels: false,    // HTML labels outside the ring
+      }
+
+      const state = {
+        catalog: buildCatalog(),
+        selected: {},
+        filter: null,
+        currentCategory: null,
+      }
+
+      // Utility
+      function currency(n) { return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n) }
+      function deg2rad(d) { return d * Math.PI / 180 }
+      function polar(cx, cy, r, angleDeg) {
+        const a = deg2rad(angleDeg)
+        return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }
+      }
+      function describeSector(cx, cy, r, a0, a1) {
+        const start = polar(cx, cy, r, a0)
+        const end = polar(cx, cy, r, a1)
+        const largeArc = (a1 - a0) % 360 > 180 ? 1 : 0
+        return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y} Z`
+      }
+
+      // Data
+      function buildCatalog() {
+        const items = {
+          tops: [
+            { name: 'Silk Blouse', palette: 'Neutral', color: '#e3ded8', price: 180 },
+            { name: 'Cropped Denim Jacket', palette: 'Vibrant', color: '#3172ff', price: 220 },
+            { name: 'Cashmere Turtleneck', palette: 'Monochrome', color: '#111111', price: 320 },
+            { name: 'Linen Shirt', palette: 'Earth', color: '#c2a678', price: 140 },
+            { name: 'Pastel Cardigan', palette: 'Pastel', color: '#ffc3d7', price: 160 },
+            { name: 'Satin Camisole', palette: 'Neutral', color: '#f4efe9', price: 130 },
+          ],
+          bottoms: [
+            { name: 'Tailored Trousers', palette: 'Monochrome', color: '#2a2a2a', price: 260 },
+            { name: 'High-Rise Jeans', palette: 'Vibrant', color: '#1b5fff', price: 190 },
+            { name: 'Pleated Skirt', palette: 'Pastel', color: '#c6e3ff', price: 210 },
+            { name: 'Linen Wide-Leg', palette: 'Earth', color: '#bfa37a', price: 200 },
+            { name: 'Silk Midi Skirt', palette: 'Neutral', color: '#ede7df', price: 280 },
+          ],
+          sunglasses: [
+            { name: 'Cat-Eye Frames', palette: 'Monochrome', color: '#222222', price: 150 },
+            { name: 'Aviator Gold', palette: 'Earth', color: '#caa46b', price: 220 },
+            { name: 'Translucent Pastel', palette: 'Pastel', color: '#ffd9f0', price: 160 },
+            { name: 'Neon Rimless', palette: 'Vibrant', color: '#ff3dbb', price: 180 },
+            { name: 'Matte Ivory', palette: 'Neutral', color: '#f1efe8', price: 170 },
+          ],
+          shoes: [
+            { name: 'Chelsea Boots', palette: 'Monochrome', color: '#111111', price: 380 },
+            { name: 'Loafers', palette: 'Neutral', color: '#e9e3da', price: 300 },
+            { name: 'Strappy Heels', palette: 'Vibrant', color: '#ff5a8a', price: 340 },
+            { name: 'Canvas Sneakers', palette: 'Pastel', color: '#b8e1ff', price: 180 },
+            { name: 'Suede Mules', palette: 'Earth', color: '#a27645', price: 260 },
+          ],
+          accessories: {
+            Earrings: [
+              { name: 'Pearl Studs', palette: 'Neutral', color: '#ffffff', price: 120 },
+              { name: 'Hoop Gold', palette: 'Earth', color: '#d1a96c', price: 180 },
+              { name: 'Prism Acrylic', palette: 'Vibrant', color: '#ff7fd1', price: 85 },
+            ],
+            Necklaces: [
+              { name: 'Herringbone Chain', palette: 'Earth', color: '#caa46b', price: 220 },
+              { name: 'Minimal Pendant', palette: 'Monochrome', color: '#1f1f1f', price: 140 },
+              { name: 'Candy Beads', palette: 'Pastel', color: '#ffd1e6', price: 95 },
+            ],
+            Ties: [
+              { name: 'Silk Charcoal', palette: 'Monochrome', color: '#222222', price: 110 },
+              { name: 'Rust Linen', palette: 'Earth', color: '#ad6e42', price: 80 },
+              { name: 'Electric Fuchsia', palette: 'Vibrant', color: '#ff2e9b', price: 90 },
+            ],
+            Gloves: [
+              { name: 'Nappa Leather', palette: 'Monochrome', color: '#121212', price: 210 },
+              { name: 'Knit Mittens', palette: 'Pastel', color: '#f6ccec', price: 60 },
+              { name: 'Camel Suede', palette: 'Earth', color: '#a87d4d', price: 150 },
+            ],
+            Belts: [
+              { name: 'Double Buckle', palette: 'Monochrome', color: '#262626', price: 130 },
+              { name: 'Braided Tan', palette: 'Earth', color: '#b8834f', price: 95 },
+              { name: 'Vanilla Leather', palette: 'Neutral', color: '#efe8db', price: 120 },
+            ],
+            Handbags: [
+              { name: 'Mini Top-Handle', palette: 'Neutral', color: '#efe9e1', price: 420 },
+              { name: 'Cobalt Crossbody', palette: 'Vibrant', color: '#246bff', price: 380 },
+              { name: 'Sage Shoulder Bag', palette: 'Pastel', color: '#b7e2c9', price: 360 },
+            ],
+            Watches: [
+              { name: 'Mesh Steel', palette: 'Monochrome', color: '#1c1c1c', price: 540 },
+              { name: 'Gold Classic', palette: 'Earth', color: '#d2b06e', price: 590 },
+              { name: 'Ivory Ceramic', palette: 'Neutral', color: '#f2ede4', price: 560 },
+            ]
+          }
+        }
+        return items
+      }
+
+      // Thumbnails as inline SVG dataURIs
+      const thumbCache = new Map()
+      function itemThumb(item) {
+        const key = item.name + '|' + item.color
+        if (thumbCache.has(key)) return thumbCache.get(key)
+        const letter = item.name.charAt(0)
+        const svg = encodeURIComponent(
+          `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'>`+
+          `<defs>`+
+          `<radialGradient id='g' cx='30%' cy='30%'>`+
+          `<stop offset='0%' stop-color='white' stop-opacity='.6'/>`+
+          `<stop offset='70%' stop-color='${item.color}' stop-opacity='1'/>`+
+          `<stop offset='100%' stop-color='${shade(item.color, -14)}' stop-opacity='1'/>`+
+          `</radialGradient>`+
+          `</defs>`+
+          `<rect x='0' y='0' width='120' height='120' rx='22' fill='url(#g)'/>`+
+          `<text x='50%' y='58%' text-anchor='middle' font-family='system-ui, -apple-system, Segoe UI, Roboto, Arial' font-size='54' font-weight='900' fill='rgba(0,0,0,0.6)'>${letter}</text>`+
+          `</svg>`
+        )
+        const uri = `data:image/svg+xml;utf8,${svg}`
+        thumbCache.set(key, uri)
+        return uri
+      }
+      function shade(hex, percent) {
+        hex = hex.replace('#','')
+        const num = parseInt(hex,16)
+        let r = (num>>16) + Math.round(255*percent/100)
+        let g = ((num>>8)&0x00FF) + Math.round(255*percent/100)
+        let b = (num&0x0000FF) + Math.round(255*percent/100)
+        r = Math.max(0, Math.min(255, r))
+        g = Math.max(0, Math.min(255, g))
+        b = Math.max(0, Math.min(255, b))
+        return '#' + (r<<16 | g<<8 | b).toString(16).padStart(6,'0')
+      }
+
+      // Wheel rendering
+      function renderWheel() {
+        const slicesG = document.getElementById('slices')
+        const labelsG = document.getElementById('labels')
+        const thumbsG = document.getElementById('thumbs')
+        const keysEl = document.getElementById('keys')
+        slicesG.innerHTML = ''
+        labelsG.innerHTML = ''
+        thumbsG.innerHTML = ''
+        if (uiCfg.showExternalKeyLabels) keysEl.innerHTML = ''
+
+        const N = categories.length
+        const step = 360 / N
+        const base = -90 // start at top
+
+        categories.forEach((cat, i) => {
+          const a0 = base + i * step
+          const a1 = base + (i+1) * step
+          const mid = (a0 + a1) / 2
+
+          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+          group.classList.add('slice')
+          group.dataset.id = cat.id
+          group.dataset.mid = String(mid)
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+          path.setAttribute('d', describeSector(wheelCfg.cx, wheelCfg.cy, wheelCfg.r, a0, a1))
+          path.setAttribute('fill', conicFill(i))
+          path.setAttribute('filter', 'url(#innerShadow)')
+          group.appendChild(path)
+
+          // Hover pop-out
+          group.addEventListener('mouseenter', () => {
+            const d = 12
+            const rad = deg2rad(mid)
+            group.style.transform = `translate(${Math.cos(rad)*d}px, ${Math.sin(rad)*d}px)`
+          })
+          group.addEventListener('mouseleave', () => {
+            group.style.transform = state.selected[cat.id] ? `translate(${Math.cos(deg2rad(mid))*6}px, ${Math.sin(deg2rad(mid))*6}px)` : ''
+          })
+
+          group.addEventListener('click', () => openPicker(cat))
+
+          slicesG.appendChild(group)
+
+          // Precompute an outer point for label/key placement
+          const outer = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r + 22, mid)
+
+          // Label on ring (SVG)
+          if (uiCfg.showSliceLabels) {
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+            label.classList.add('slice-label')
+            label.setAttribute('x', String(outer.x))
+            label.setAttribute('y', String(outer.y))
+            label.setAttribute('text-anchor', 'middle')
+            label.setAttribute('dominant-baseline', 'middle')
+            label.setAttribute('transform', `rotate(${mid}, ${outer.x}, ${outer.y}) rotate(${mid>90||mid<-90?180:0}, ${outer.x}, ${outer.y})`)
+            label.textContent = cat.label
+            labelsG.appendChild(label)
+          }
+
+          // External key labels (adjacent to pie)
+          if (uiCfg.showExternalKeyLabels) {
+            placeKeyLabel(cat, outer, mid)
+          }
+        })
+
+        updateSelectionVisuals()
+      }
+
+      function conicFill(i) {
+        // Alternating luxe gradient bands
+        const palette = ["#1a1c22","#151820","#13161c","#10131a"]
+        const a = palette[i % palette.length]
+        const b = shade(a, 12)
+        return `url(#grad-${i})`
+      }
+
+      // Build defs gradients dynamically (one per slice)
+      function ensureSliceGradients() {
+        const svg = document.getElementById('wheel')
+        let defs = svg.querySelector('defs#slice-defs')
+        if (!defs) {
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs')
+          defs.id = 'slice-defs'
+          svg.insertBefore(defs, svg.firstChild)
+        }
+        defs.innerHTML = ''
+        const N = categories.length
+        for (let i=0;i<N;i++) {
+          const id = `grad-${i}`
+          const lg = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient')
+          lg.id = id
+          lg.setAttribute('x1','0%'); lg.setAttribute('y1','0%'); lg.setAttribute('x2','100%'); lg.setAttribute('y2','100%')
+          const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+          const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+          const base = [
+            ['#1b2030', '#10131a'],
+            ['#161a25', '#0e1117'],
+            ['#15202a', '#0b1116'],
+            ['#1a1b27', '#0f1119'],
+          ][i % 4]
+          stop1.setAttribute('offset','0%'); stop1.setAttribute('stop-color', base[0])
+          stop2.setAttribute('offset','100%'); stop2.setAttribute('stop-color', base[1])
+          lg.appendChild(stop1); lg.appendChild(stop2)
+          defs.appendChild(lg)
+        }
+      }
+
+      function placeKeyLabel(cat, outerPoint, angle) {
+        const keys = document.getElementById('keys')
+        const wrap = document.createElement('div')
+        wrap.className = 'key-label'
+        const r = wheelCfg.r + 48
+        const pos = polar(wheelCfg.cx, wheelCfg.cy, r, angle)
+        // Convert SVG coords to absolute inside wheel-wrap
+        // wheel viewBox is 0..600, container is sized to element width
+        const wheel = document.getElementById('wheel')
+        const bbox = wheel.getBoundingClientRect()
+        // Using percentages within keys container
+        const pctX = (pos.x / 600) * 100
+        const pctY = (pos.y / 600) * 100
+        wrap.style.left = pctX + '%'
+        wrap.style.top = pctY + '%'
+        wrap.textContent = cat.label
+        keys.appendChild(wrap)
+      }
+
+      function updateSelectionVisuals() {
+        const slices = Array.from(document.querySelectorAll('#slices .slice'))
+        const thumbsG = document.getElementById('thumbs')
+        thumbsG.innerHTML = ''
+
+        slices.forEach(g => {
+          const id = g.dataset.id
+          const mid = parseFloat(g.dataset.mid || '0')
+          if (state.selected[id]) {
+            g.classList.add('selected')
+            const d = 6
+            const rad = deg2rad(mid)
+            g.style.transform = `translate(${Math.cos(rad)*d}px, ${Math.sin(rad)*d}px)`
+
+            const pos = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r*0.62, mid)
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+            img.setAttribute('href', itemThumb(state.selected[id].item))
+            img.setAttribute('x', String(pos.x - 34))
+            img.setAttribute('y', String(pos.y - 34))
+            img.setAttribute('width', '68')
+            img.setAttribute('height', '68')
+            img.setAttribute('clip-path', 'circle(50% at 50% 50%)')
+            img.setAttribute('class', 'thumb-icon')
+            thumbsG.appendChild(img)
+          } else {
+            g.classList.remove('selected')
+            g.style.transform = ''
+          }
+        })
+      }
+
+      // Picker logic
+      const pickerEl = document.getElementById('picker')
+      const pickerTitle = document.getElementById('picker-title')
+      const pickerSub = document.getElementById('picker-sub')
+      const pickerFilters = document.getElementById('picker-filters')
+      const pickerGrid = document.getElementById('picker-grid')
+      document.getElementById('picker-close').addEventListener('click', () => closePicker())
+
+      function openPicker(cat) {
+        state.currentCategory = cat
+        pickerTitle.textContent = `Choose ${cat.label}`
+        pickerSub.textContent = cat.isAccessory ? 'Pick an accessory type, then an item' : 'Pick one item to add to your look'
+        pickerFilters.innerHTML = ''
+
+        let items = []
+        if (cat.isAccessory) {
+          // accessory type chips
+          accessoryTypes.forEach((t, idx) => {
+            const chip = document.createElement('button')
+            chip.className = 'filter' + (idx===0 ? ' active' : '')
+            chip.textContent = t
+            chip.addEventListener('click', () => {
+              Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+              chip.classList.add('active')
+              renderPickerGrid(cat, t)
+            })
+            pickerFilters.appendChild(chip)
+          })
+          renderPickerGrid(cat, accessoryTypes[0])
+        } else {
+          // palette filter chips
+          const allChip = document.createElement('button')
+          allChip.className = 'filter active'
+          allChip.textContent = 'All Palettes'
+          allChip.addEventListener('click', () => {
+            Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+            allChip.classList.add('active')
+            state.filter = null
+            renderPickerGrid(cat)
+          })
+          pickerFilters.appendChild(allChip)
+          palettes.forEach(p => {
+            const chip = document.createElement('button')
+            chip.className = 'filter'
+            chip.textContent = p
+            chip.addEventListener('click', () => {
+              Array.from(pickerFilters.children).forEach(c => c.classList.remove('active'))
+              chip.classList.add('active')
+              state.filter = p
+              renderPickerGrid(cat)
+            })
+            pickerFilters.appendChild(chip)
+          })
+          renderPickerGrid(cat)
+        }
+
+        pickerEl.classList.add('open')
+        pickerEl.setAttribute('aria-hidden','false')
+      }
+
+      function renderPickerGrid(cat, accessoryType) {
+        pickerGrid.innerHTML = ''
+        let list = []
+        if (cat.isAccessory) {
+          list = state.catalog.accessories[accessoryType] || []
+        } else {
+          list = state.catalog[cat.id] || []
+          if (state.filter) list = list.filter(it => it.palette === state.filter)
+        }
+        list.forEach(item => {
+          const card = document.createElement('div')
+          card.className = 'card'
+          card.addEventListener('click', () => {
+            selectItem(cat, item, accessoryType)
+            closePicker()
+          })
+          const img = document.createElement('div')
+          img.className = 'img'
+          img.style.backgroundImage = `url(${itemThumb(item)})`
+          img.style.backgroundSize = 'cover'
+          img.style.backgroundPosition = 'center'
+          const info = document.createElement('div')
+          const title = document.createElement('div')
+          title.style.fontWeight = '800'
+          title.style.letterSpacing = '0.02em'
+          title.textContent = item.name
+          const meta = document.createElement('div')
+          meta.className = 'meta'
+          meta.textContent = `${item.palette} • ${accessoryType ? accessoryType : cat.label}`
+          const price = document.createElement('div')
+          price.className = 'price'
+          price.textContent = currency(item.price)
+          info.appendChild(title)
+          info.appendChild(meta)
+          info.appendChild(price)
+          card.appendChild(img)
+          card.appendChild(info)
+          pickerGrid.appendChild(card)
+        })
+      }
+
+      function closePicker() {
+        pickerEl.classList.remove('open')
+        pickerEl.setAttribute('aria-hidden','true')
+        state.filter = null
+      }
+
+      function selectItem(cat, item, accessoryType) {
+        state.selected[cat.id] = { item, type: cat.isAccessory ? (accessoryType || 'Accessory') : null }
+        renderSummary()
+        updateSelectionVisuals()
+      }
+
+      function clearItem(catId) {
+        delete state.selected[catId]
+        renderSummary()
+        updateSelectionVisuals()
+      }
+
+      // Summary table
+      function renderSummary() {
+        const body = document.getElementById('summary-body')
+        body.innerHTML = ''
+        let total = 0
+
+        categories.forEach(cat => {
+          const row = document.createElement('tr')
+          const td = (n=1)=>{const e=document.createElement('td'); e.colSpan=n; return e}
+
+          // Col 1: Category
+          const c1 = td()
+          c1.innerHTML = `<span class="chip chip-ghost">${cat.label}</span>`
+
+          // Col 2: Item or Add CTA
+          const c2 = td()
+          if (state.selected[cat.id]) {
+            const sel = state.selected[cat.id]
+            const wrap = document.createElement('div')
+            wrap.style.display = 'flex'
+            wrap.style.alignItems = 'center'
+            wrap.style.gap = '10px'
+            const th = document.createElement('div')
+            th.className = 'thumb'
+            th.style.backgroundImage = `url(${itemThumb(sel.item)})`
+            th.style.backgroundSize = 'cover'
+            const name = document.createElement('div')
+            name.style.fontWeight = '700'
+            name.textContent = sel.item.name
+            const meta = document.createElement('div')
+            meta.className = 'chip'
+            meta.innerHTML = `<span class="dot" style="background:${sel.item.color}"></span>${sel.item.palette}${sel.type ? ' • '+sel.type : ''}`
+            wrap.appendChild(th)
+            const inner = document.createElement('div')
+            inner.appendChild(name)
+            inner.appendChild(meta)
+            c2.appendChild(wrap)
+            wrap.appendChild(inner)
+          } else {
+            const add = document.createElement('button')
+            add.className = 'btn'
+            add.textContent = 'Add…'
+            add.addEventListener('click', () => openPicker(cat))
+            c2.appendChild(add)
+          }
+
+          // Col 3: Price
+          const c3 = td()
+          if (state.selected[cat.id]) {
+            const p = state.selected[cat.id].item.price
+            total += p
+            c3.textContent = currency(p)
+          } else {
+            c3.innerHTML = '<span style="color:var(--muted)">—</span>'
+          }
+
+          // Col 4: Actions
+          const c4 = td()
+          const actionWrap = document.createElement('div')
+          actionWrap.className = 'row-actions'
+          const chooseBtn = document.createElement('button')
+          chooseBtn.className = 'btn'
+          chooseBtn.textContent = 'Choose'
+          chooseBtn.addEventListener('click', () => openPicker(cat))
+          actionWrap.appendChild(chooseBtn)
+          if (state.selected[cat.id]) {
+            const clearBtn = document.createElement('button')
+            clearBtn.className = 'btn btn-danger'
+            clearBtn.textContent = 'Remove'
+            clearBtn.addEventListener('click', () => clearItem(cat.id))
+            actionWrap.appendChild(clearBtn)
+          }
+          c4.appendChild(actionWrap)
+
+          // Assemble
+          const wrapper = document.createElement('td')
+          wrapper.colSpan = 4
+          const rowDiv = document.createElement('div')
+          rowDiv.className = 'row'
+          rowDiv.appendChild(c1)
+          rowDiv.appendChild(c2)
+          rowDiv.appendChild(c3)
+          rowDiv.appendChild(c4)
+          wrapper.appendChild(rowDiv)
+          row.appendChild(wrapper)
+          body.appendChild(row)
+        })
+
+        document.getElementById('total-price').textContent = currency(total)
+      }
+
+      // Mix logic
+      function computeDominantPalette() {
+        const counts = new Map()
+        Object.values(state.selected).forEach(({item}) => {
+          counts.set(item.palette, (counts.get(item.palette)||0)+1)
+        })
+        let best = null, max = 0
+        counts.forEach((v, k) => { if (v>max) { max=v; best=k } })
+        return best // can be null
+      }
+
+      function pickItemForCategory(cat, preferPalette, accessoryType) {
+        let pool = []
+        if (cat.isAccessory) {
+          const types = accessoryType ? [accessoryType] : accessoryTypes
+          types.forEach(t => { pool = pool.concat(state.catalog.accessories[t]) })
+        } else {
+          pool = state.catalog[cat.id]
+        }
+        if (preferPalette) {
+          const filtered = pool.filter(it => it.palette === preferPalette)
+          if (filtered.length) pool = filtered
+        }
+        return pool[Math.floor(Math.random()*pool.length)]
+      }
+
+      function spinWheelOnce() {
+        const wheelEl = document.querySelector('.wheel-wrap')
+        wheelEl.classList.add('wheel-spinning')
+        return new Promise(res => setTimeout(() => {
+          wheelEl.classList.remove('wheel-spinning'); res()
+        }, 1200))
+      }
+
+      async function mixFill() {
+        const prefer = computeDominantPalette() || palettes[Math.floor(Math.random()*palettes.length)]
+        // randomly assign accessory types for empty accessory slots
+        const shuffledTypes = accessoryTypes.slice().sort(()=>Math.random()-0.5)
+        let tIdx = 0
+        for (const cat of categories) {
+          if (!state.selected[cat.id]) {
+            const type = cat.isAccessory ? shuffledTypes[tIdx++ % shuffledTypes.length] : null
+            const item = pickItemForCategory(cat, prefer, type)
+            state.selected[cat.id] = { item, type }
+          }
+        }
+        renderSummary(); updateSelectionVisuals()
+      }
+
+      // Events
+      document.getElementById('mix-btn').addEventListener('click', async () => {
+        await spinWheelOnce()
+        await mixFill()
+        confettiBurst()
+      })
+
+      document.getElementById('randomize-all').addEventListener('click', async () => {
+        state.selected = {}
+        renderSummary(); updateSelectionVisuals()
+        await spinWheelOnce()
+        await mixFill()
+        confettiBurst()
+      })
+
+      document.getElementById('clear-all').addEventListener('click', () => {
+        state.selected = {}
+        renderSummary(); updateSelectionVisuals()
+      })
+
+      // Confetti
+      function confettiBurst() {
+        const container = document.querySelector('.stage')
+        const burst = document.createElement('div')
+        burst.style.position = 'absolute'
+        burst.style.inset = 0
+        burst.style.pointerEvents = 'none'
+        container.appendChild(burst)
+        const colors = ['#6e52ff','#ff7fd1','#22d1ee','#f9f871','#7cf1be']
+        for (let i=0;i<24;i++) {
+          const p = document.createElement('div')
+          const size = 6 + Math.random()*8
+          p.style.position = 'absolute'
+          p.style.left = '50%'; p.style.top = '50%'
+          p.style.width = size+'px'; p.style.height = size+'px'
+          p.style.background = colors[i%colors.length]
+          p.style.borderRadius = Math.random()>.5 ? '2px' : '999px'
+          p.style.transform = `translate(-50%,-50%) rotate(${Math.random()*360}deg)`
+          p.style.filter = 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))'
+          burst.appendChild(p)
+          const dx = (Math.random()-.5) * 320
+          const dy = (Math.random()-.5) * 240
+          const rot = (Math.random()-.5) * 720
+          p.animate([
+            { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`, opacity: 0 }
+          ], { duration: 900 + Math.random()*500, easing: 'cubic-bezier(.15,.8,.2,1)', fill: 'forwards' })
+        }
+        setTimeout(()=>burst.remove(), 1600)
+      }
+
+      // Init
+      ensureSliceGradients()
+      renderWheel()
+      renderSummary()
+
+      // Recompute key labels on resize only if external keys are enabled
+      window.addEventListener('resize', () => {
+        if (!uiCfg.showExternalKeyLabels) return
+        const keys = document.getElementById('keys')
+        keys.innerHTML = ''
+        const N = categories.length
+        const step = 360 / N
+        const base = -90
+        categories.forEach((cat, i) => {
+          const a0 = base + i * step
+          const a1 = base + (i+1) * step
+          const mid = (a0 + a1) / 2
+          const pos = polar(wheelCfg.cx, wheelCfg.cy, wheelCfg.r + 22, mid)
+          placeKeyLabel(cat, pos, mid)
+        })
+      })
+
+    })()
+  </script>
+</body>
+</html>
+
+```
+
+I embedded the entire catalog directly into the single file and switched the loader to read it from the page, so no external fetch is needed.
+
+- File updated: `/data/projects/svg_coding_eval/outfit-mixer.html`
+- What changed:
+  - Added a `<script type="application/json" id="catalogData">` with the full catalog.
+  - Updated the loader to `JSON.parse` that block (with a network fetch only as a fallback).
+  - If no categories are present, the UI now shows a graceful empty state.
+
+Use it
+- Refresh `http://localhost:8000/outfit-mixer.html` or open the HTML via file://.
+- The wheel should render immediately.
+- Images still load from the `images/` folder as before.
+
+- Catalog is now baked into the artifact; the mixer works as a single HTML file.
+

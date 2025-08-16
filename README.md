@@ -7,7 +7,7 @@ This report is by no means scientific. The results are intended as a broad overv
 
 ## Methodology
 
-The same [prompt](prompt.md) is used for all tests. For each run, we ask the coding agent to to one-shot the challenge. 
+The same [prompt](prompt.md) is used for all tests. For each run, we ask the coding agent to to one-shot the challenge. If that does not turn out well, we manually prompt the agent and try to fix obvious issues with a maximum of 10 attempts.
 
 To isolate the context, we run each coding agent in an empty folder called "workspace". This way the artifacts from other models do not interfere with the current model.
 

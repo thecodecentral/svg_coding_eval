@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Outfit Mixer</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; padding: 20px; }
+        #left, #right { border: 1px solid #ccc; padding: 20px; height: 600px; overflow: auto; }
+        #middle { text-align: center; }
+        #flipper { position: relative; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        #front, #back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; overflow: auto; }
+        #back { transform: rotateY(180deg); }
+        #flipper.flipped { transform: rotateY(180deg); }
+        #modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid black; z-index: 100; width: 400px; height: 500px; overflow: auto; }
+        .product-item { display: flex; align-items: center; margin: 10px; cursor: pointer; }
+        .product-item img { width: 50px; margin-right: 10px; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinning { animation: spin 2s linear; }
+    </style>
+</head>
+<body>
+    <div id="left">
+        <div id="flipper">
+            <div id="front">
+                <h2>Instructions</h2>
+                <p>Welcome to Outfit Mixer! Toggle slots on the right to customize your outfit categories. Click on a pizza slice to select an item for that category. After selecting some, click Mix in the center to automatically fill the rest!</p>
+            </div>
+            <div id="back"></div>
+        </div>
+    </div>
+    <div id="middle">
+        <svg id="svg" width="500" height="500" viewBox="-250 -250 500 500">
+            <g id="slice-group"></g>
+            <circle id="mix-circle" cx="0" cy="0" r="40" fill="lightblue" style="cursor: pointer;" />
+            <text x="0" y="5" text-anchor="middle" font-size="20" fill="black">Mix</text>
+        </svg>
+    </div>
+    <div id="right">
+        <h2>Options</h2>
+        <label>Gender: <select><option>Male</option><option>Female</option><option>Other</option></select></label>
+        <h3>Slots</h3>
+        <div id="toggles"></div>
+    </div>
+    <div id="modal">
+        <h2>Select Product for <span id="modal-cat"></span></h2>
+        <input id="keyword" type="text" placeholder="Search keyword" oninput="filterProducts()" />
+        <div id="product-list"></div>
+    </div>
+    <script>
+        let data = {
+  "belts": [
+    {
+      "name": "Classic Leather Belt",
+      "brand": "Brand A",
+      "image_path": "images/belts/belt1.jpg"
+    },
+    {
+      "name": "Woven Canvas Belt",
+      "brand": "Brand B",
+      "image_path": "images/belts/belt2.jpg"
+    },
+    {
+      "name": "Reversible Belt",
+      "brand": "Brand C",
+      "image_path": "images/belts/belt3.jpg"
+    },
+    {
+      "name": "Chain Link Belt",
+      "brand": "Brand D",
+      "image_path": "images/belts/belt4.jpg"
+    },
+    {
+      "name": "Braided Leather Belt",
+      "brand": "Brand E",
+      "image_path": "images/belts/belt5.jpg"
+    },
+    {
+      "name": "Designer Buckle Belt",
+      "brand": "Brand F",
+      "image_path": "images/belts/belt6.jpg"
+    }
+  ],
+  "bottoms": [
+    {
+      "name": "Floral Midi Dress",
+      "brand": "Brand G",
+      "image_path": "images/bottoms/dress1.jpg"
+    },
+    {
+      "name": "Wrap Dress",
+      "brand": "Brand H",
+      "image_path": "images/bottoms/dress2.jpg"
+    },
+    {
+      "name": "Cocktail Dress",
+      "brand": "Brand A",
+      "image_path": "images/bottoms/dress3.jpg"
+    },
+    {
+      "name": "Slim Fit Jeans",
+      "brand": "Brand B",
+      "image_path": "images/bottoms/jeans1.jpg"
+    },
+    {
+      "name": "High-Waisted Jeans",
+      "brand": "Brand C",
+      "image_path": "images/bottoms/jeans2.jpg"
+    },
+    {
+      "name": "Distressed Denim",
+      "brand": "Brand D",
+      "image_path": "images/bottoms/jeans3.jpg"
+    },
+    {
+      "name": "Wide Leg Jeans",
+      "brand": "Brand E",
+      "image_path": "images/bottoms/jeans4.jpg"
+    },
+    {
+      "name": "Pleated Midi Skirt",
+      "brand": "Brand F",
+      "image_path": "images/bottoms/skirt1.jpg"
+    },
+    {
+      "name": "A-Line Skirt",
+      "brand": "Brand G",
+      "image_path": "images/bottoms/skirt2.jpg"
+    },
+    {
+      "name": "Pencil Skirt",
+      "brand": "Brand H",
+      "image_path": "images/bottoms/skirt3.jpg"
+    }
+  ],
+  "earrings": [
+    {
+      "name": "Pearl Drop Earrings",
+      "brand": "Brand A",
+      "image_path": "images/earrings/earrings1.jpg"
+    },
+    {
+      "name": "Gold Hoop Earrings",
+      "brand": "Brand B",
+      "image_path": "images/earrings/earrings2.jpg"
+    },
+    {
+      "name": "Crystal Stud Earrings",
+      "brand": "Brand C",
+      "image_path": "images/earrings/earrings3.jpg"
+    },
+    {
+      "name": "Chandelier Earrings",
+      "brand": "Brand D",
+      "image_path": "images/earrings/earrings4.jpg"
+    },
+    {
+      "name": "Minimalist Bar Earrings",
+      "brand": "Brand E",
+      "image_path": "images/earrings/earrings5.jpg"
+    }
+  ],
+  "gloves": [
+    {
+      "name": "Leather Driving Gloves",
+      "brand": "Brand F",
+      "image_path": "images/gloves/gloves1.jpg"
+    },
+    {
+      "name": "Cashmere Gloves",
+      "brand": "Brand G",
+      "image_path": "images/gloves/gloves2.jpg"
+    },
+    {
+      "name": "Fingerless Gloves",
+      "brand": "Brand H",
+      "image_path": "images/gloves/gloves3.jpg"
+    },
+    {
+      "name": "Winter Wool Gloves",
+      "brand": "Brand A",
+      "image_path": "images/gloves/gloves4.jpg"
+    },
+    {
+      "name": "Evening Opera Gloves",
+      "brand": "Brand B",
+      "image_path": "images/gloves/gloves5.jpg"
+    },
+    {
+      "name": "Touchscreen Gloves",
+      "brand": "Brand C",
+      "image_path": "images/gloves/gloves6.jpg"
+    }
+  ],
+  "handbags": [
+    {
+      "name": "Tote Bag",
+      "brand": "Brand D",
+      "image_path": "images/handbags/handbag1.jpg"
+    },
+    {
+      "name": "Crossbody Bag",
+      "brand": "Brand E",
+      "image_path": "images/handbags/handbag2.jpg"
+    },
+    {
+      "name": "Clutch Purse",
+      "brand": "Brand F",
+      "image_path": "images/handbags/handbag3.jpg"
+    },
+    {
+      "name": "Shoulder Bag",
+      "brand": "Brand G",
+      "image_path": "images/handbags/handbag4.jpg"
+    },
+    {
+      "name": "Bucket Bag",
+      "brand": "Brand H",
+      "image_path": "images/handbags/handbag5.jpg"
+    },
+    {
+      "name": "Satchel Bag",
+      "brand": "Brand A",
+      "image_path": "images/handbags/handbag6.jpg"
+    },
+    {
+      "name": "Hobo Bag",
+      "brand": "Brand B",
+      "image_path": "images/handbags/handbag7.jpg"
+    }
+  ],
+  "hats": [
+    {
+      "name": "Fedora Hat",
+      "brand": "Brand C",
+      "image_path": "images/hats/hat1.jpg"
+    },
+    {
+      "name": "Baseball Cap",
+      "brand": "Brand D",
+      "image_path": "images/hats/hat2.jpg"
+    },
+    {
+      "name": "Wide Brim Sun Hat",
+      "brand": "Brand E",
+      "image_path": "images/hats/hat3.jpg"
+    },
+    {
+      "name": "Beanie",
+      "brand": "Brand F",
+      "image_path": "images/hats/hat4.jpg"
+    },
+    {
+      "name": "Beret",
+      "brand": "Brand G",
+      "image_path": "images/hats/hat5.jpg"
+    }
+  ],
+  "necklaces": [
+    {
+      "name": "Pearl Strand Necklace",
+      "brand": "Brand H",
+      "image_path": "images/necklaces/necklace1.jpg"
+    },
+    {
+      "name": "Gold Chain Necklace",
+      "brand": "Brand A",
+      "image_path": "images/necklaces/necklace2.jpg"
+    },
+    {
+      "name": "Pendant Necklace",
+      "brand": "Brand B",
+      "image_path": "images/necklaces/necklace3.jpg"
+    },
+    {
+      "name": "Choker Necklace",
+      "brand": "Brand C",
+      "image_path": "images/necklaces/necklace4.jpg"
+    }
+  ],
+  "scaves": [
+    {
+      "name": "Silk Scarf",
+      "brand": "Brand D",
+      "image_path": "images/scaves/scarf1.jpg"
+    },
+    {
+      "name": "Cashmere Scarf",
+      "brand": "Brand E",
+      "image_path": "images/scaves/scarf2.jpg"
+    },
+    {
+      "name": "Infinity Scarf",
+      "brand": "Brand F",
+      "image_path": "images/scaves/scarf3.jpg"
+    },
+    {
+      "name": "Printed Square Scarf",
+      "brand": "Brand G",
+      "image_path": "images/scaves/scarf4.jpg"
+    },
+    {
+      "name": "Wool Blanket Scarf",
+      "brand": "Brand H",
+      "image_path": "images/scaves/scarf5.jpg"
+    },
+    {
+      "name": "Lightweight Summer Scarf",
+      "brand": "Brand A",
+      "image_path": "images/scaves/scarf6.jpg"
+    },
+    {
+      "name": "Fringed Wrap Scarf",
+      "brand": "Brand B",
+      "image_path": "images/scaves/scarf7.jpg"
+    }
+  ],
+  "shoes": [
+    {
+      "name": "Leather Oxford Shoes",
+      "brand": "Brand C",
+      "image_path": "images/shoes/shoes1.jpg"
+    },
+    {
+      "name": "High-Top Sneakers",
+      "brand": "Brand D",
+      "image_path": "images/shoes/shoes2.jpg"
+    },
+    {
+      "name": "Ankle Boots",
+      "brand": "Brand E",
+      "image_path": "images/shoes/shoes3.jpg"
+    },
+    {
+      "name": "Running Shoes",
+      "brand": "Brand F",
+      "image_path": "images/shoes/shoes4.jpg"
+    }
+  ],
+  "sunglasses": [
+    {
+      "name": "Aviator Sunglasses",
+      "brand": "Brand G",
+      "image_path": "images/sunglasses/sunglassess1.jpg"
+    },
+    {
+      "name": "Cat Eye Sunglasses",
+      "brand": "Brand H",
+      "image_path": "images/sunglasses/sunglassess2.jpg"
+    },
+    {
+      "name": "Round Frame Sunglasses",
+      "brand": "Brand A",
+      "image_path": "images/sunglasses/sunglassess3.jpg"
+    },
+    {
+      "name": "Wayfarer Sunglasses",
+      "brand": "Brand B",
+      "image_path": "images/sunglasses/sunglassess4.jpg"
+    },
+    {
+      "name": "Sport Sunglasses",
+      "brand": "Brand C",
+      "image_path": "images/sunglasses/sunglassess5.jpg"
+    }
+  ],
+  "tops": [
+    {
+      "name": "Wool Overcoat",
+      "brand": "Brand D",
+      "image_path": "images/tops/coat1.jpg"
+    },
+    {
+      "name": "Trench Coat",
+      "brand": "Brand E",
+      "image_path": "images/tops/coat2.jpg"
+    },
+    {
+      "name": "Puffer Coat",
+      "brand": "Brand F",
+      "image_path": "images/tops/coat3.jpg"
+    },
+    {
+      "name": "Maxi Dress",
+      "brand": "Brand G",
+      "image_path": "images/tops/dress1.png"
+    },
+    {
+      "name": "Shift Dress",
+      "brand": "Brand H",
+      "image_path": "images/tops/dress2.png"
+    },
+    {
+      "name": "Evening Gown",
+      "brand": "Brand A",
+      "image_path": "images/tops/dress7.jpg"
+    },
+    {
+      "name": "Denim Jacket",
+      "brand": "Brand B",
+      "image_path": "images/tops/jacket1.jpg"
+    },
+    {
+      "name": "Leather Jacket",
+      "brand": "Brand C",
+      "image_path": "images/tops/jacket2.jpg"
+    },
+    {
+      "name": "Bomber Jacket",
+      "brand": "Brand D",
+      "image_path": "images/tops/jacket3.jpg"
+    },
+    {
+      "name": "Cotton T-Shirt",
+      "brand": "Brand E",
+      "image_path": "images/tops/top1.png"
+    },
+    {
+      "name": "Silk Blouse",
+      "brand": "Brand F",
+      "image_path": "images/tops/top2.png"
+    },
+    {
+      "name": "Knit Sweater",
+      "brand": "Brand G",
+      "image_path": "images/tops/top3.png"
+    },
+    {
+      "name": "Linen Shirt",
+      "brand": "Brand H",
+      "image_path": "images/tops/top4.png"
+    }
+  ],
+  "watches": [
+    {
+      "name": "Classic Analog Watch",
+      "brand": "Brand A",
+      "image_path": "images/watches/watch1.jpg"
+    },
+    {
+      "name": "Digital Sport Watch",
+      "brand": "Brand B",
+      "image_path": "images/watches/watch2.jpg"
+    },
+    {
+      "name": "Chronograph Watch",
+      "brand": "Brand C",
+      "image_path": "images/watches/watch3.jpg"
+    },
+    {
+      "name": "Smart Watch",
+      "brand": "Brand D",
+      "image_path": "images/watches/watch4.jpg"
+    },
+    {
+      "name": "Dress Watch",
+      "brand": "Brand E",
+      "image_path": "images/watches/watch5.jpg"
+    },
+    {
+      "name": "Dive Watch",
+      "brand": "Brand F",
+      "image_path": "images/watches/watch6.jpg"
+    }
+  ]
+};
+let categories = Object.keys(data).sort();
+let enabled = new Set();
+let selected = {};
+const radius = 200;
+const popDist = 20;
+let instructions = '';
+categories.forEach(cat => {
+    enabled.add(cat);
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" checked data-cat="${cat}" onchange="toggleSlot(this)"> ${cat.charAt(0).toUpperCase() + cat.slice(1)}`;
+    document.getElementById('toggles').appendChild(label);
+});
+instructions = document.getElementById('front').innerHTML;
+drawWheel();
+document.getElementById('mix-circle').addEventListener('click', mix);
+        function toggleSlot(checkbox) {
+            const cat = checkbox.dataset.cat;
+            if (checkbox.checked) {
+                enabled.add(cat);
+            } else {
+                enabled.delete(cat);
+                delete selected[cat];
+                updateLeftTable();
+            }
+            drawWheel();
+        }
+        function drawWheel() {
+            const sliceGroup = document.getElementById('slice-group');
+            sliceGroup.innerHTML = '';
+            const num = enabled.size;
+            if (num === 0) return;
+            const angle = 360 / num;
+            const enabledCats = Array.from(enabled).sort();
+            const colors = ['#ffdddd', '#ddffdd', '#ddddff', '#ffffdd', '#ddffff', '#ffddff'];
+            for (let i = 0; i < num; i++) {
+                const cat = enabledCats[i];
+                const startAngle = i * angle;
+                const endAngle = (i + 1) * angle;
+                const startRad = startAngle * Math.PI / 180;
+                const endRad = endAngle * Math.PI / 180;
+                const startX = radius * Math.cos(startRad);
+                const startY = radius * Math.sin(startRad);
+                const endX = radius * Math.cos(endRad);
+                const endY = radius * Math.sin(endRad);
+                const largeArc = angle > 180 ? 1 : 0;
+                const d = `M 0 0 L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY} Z`;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', d);
+                path.setAttribute('fill', colors[i % colors.length]);
+                path.setAttribute('stroke', 'black');
+                path.style.transition = 'transform 0.2s ease-out';
+                path.dataset.cat = cat;
+                const midRad = (startAngle + angle / 2) * Math.PI / 180;
+                const dx = popDist * Math.cos(midRad);
+                const dy = popDist * Math.sin(midRad);
+                path.addEventListener('mouseenter', () => {
+                    path.style.transform = `translate(${dx}px, ${dy}px)`;
+                });
+                path.addEventListener('mouseleave', () => {
+                    path.style.transform = '';
+                });
+                path.addEventListener('click', () => showModal(cat));
+                sliceGroup.appendChild(path);
+                // text
+                const textDist = radius + 20;
+                const textX = textDist * Math.cos(midRad);
+                const textY = textDist * Math.sin(midRad);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', textX);
+                text.setAttribute('y', textY);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                const rotation = startAngle + angle / 2 + (textX < 0 ? 180 : 0);
+                text.setAttribute('transform', `rotate(${rotation}, ${textX}, ${textY})`);
+                sliceGroup.appendChild(text);
+                // thumbnail if selected
+                if (selected[cat]) {
+                    const imgDist = radius * 0.5;
+                    const imgX = imgDist * Math.cos(midRad) - 25;
+                    const imgY = imgDist * Math.sin(midRad) - 25;
+                    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                    image.setAttribute('x', imgX);
+                    image.setAttribute('y', imgY);
+                    image.setAttribute('width', '50');
+                    image.setAttribute('height', '50');
+                    image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', selected[cat].image_path);
+                    sliceGroup.appendChild(image);
+                }
+            }
+        }
+        let currentCat = '';
+        function showModal(cat) {
+            currentCat = cat;
+            document.getElementById('modal-cat').textContent = cat;
+            document.getElementById('keyword').value = '';
+            filterProducts();
+            document.getElementById('modal').style.display = 'block';
+        }
+        function filterProducts() {
+            const keyword = document.getElementById('keyword').value.toLowerCase();
+            const list = document.getElementById('product-list');
+            list.innerHTML = '';
+            data[currentCat].forEach(item => {
+                if (item.name.toLowerCase().includes(keyword) || item.brand.toLowerCase().includes(keyword)) {
+                    const div = document.createElement('div');
+                    div.className = 'product-item';
+                    div.innerHTML = `<img src="${item.image_path}" /><span>${item.name} by ${item.brand}</span>`;
+                    div.onclick = () => {
+                        selected[currentCat] = item;
+                        document.getElementById('modal').style.display = 'none';
+                        drawWheel();
+                        updateLeftTable();
+                    };
+                    list.appendChild(div);
+                }
+            });
+        }
+        function updateLeftTable() {
+            const front = document.getElementById('front');
+            const hasSelection = Object.keys(selected).length > 0;
+            if (!hasSelection) {
+                front.innerHTML = instructions;
+                return;
+            }
+            let table = '<table border="1"><tr><th>Thumbnail</th><th>Details</th><th>Action</th></tr>';
+            for (let cat in selected) {
+                const item = selected[cat];
+                table += `<tr><td><img src="${item.image_path}" width="50"></td><td>${item.name} by ${item.brand}<br>Category: ${cat}</td><td><button onclick="removeItem('${cat}')">Remove</button></td></tr>`;
+            }
+            table += '</table><br><button onclick="showPreview()">Preview</button>';
+            front.innerHTML = table;
+        }
+        function removeItem(cat) {
+            delete selected[cat];
+            drawWheel();
+            updateLeftTable();
+        }
+        function showPreview() {
+            const back = document.getElementById('back');
+            let content = '<h2>Outfit Preview</h2><button onclick="hidePreview()">Back</button><div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">';
+            for (let cat in selected) {
+                const item = selected[cat];
+                content += `<div><img src="${item.image_path}" style="width: 100%;"><p>${cat}: ${item.name}</p></div>`;
+            }
+            content += '</div>';
+            back.innerHTML = content;
+            document.getElementById('flipper').classList.add('flipped');
+        }
+        function hidePreview() {
+            document.getElementById('flipper').classList.remove('flipped');
+        }
+        function mix() {
+            const sliceGroup = document.getElementById('slice-group');
+            sliceGroup.classList.add('spinning');
+            setTimeout(() => {
+                sliceGroup.classList.remove('spinning');
+                Array.from(enabled).forEach(cat => {
+                    if (!selected[cat]) {
+                        const items = data[cat];
+                        const randomItem = items[Math.floor(Math.random() * items.length)];
+                        selected[cat] = randomItem;
+                    }
+                });
+                drawWheel();
+                updateLeftTable();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

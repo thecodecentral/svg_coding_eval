@@ -1,0 +1,2 @@
+- agent mode
+- gpt-5 with max context window

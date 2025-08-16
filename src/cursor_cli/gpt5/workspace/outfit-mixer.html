@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>X Outfit Mixer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #161922;
+      --panel-2: #10131a;
+      --text: #e9ecf1;
+      --muted: #9aa3b2;
+      --brand: #a3ffda; /* mint */
+      --brand-2: #8ab4ff; /* periwinkle */
+      --accent-men: #8ab4ff;
+      --accent-women: #ff9ad5;
+      --success: #47d187;
+      --danger: #ff6b6b;
+      --shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 70% -20%, rgba(138,180,255,0.12), transparent 60%),
+                  radial-gradient(1000px 600px at 10% 110%, rgba(163,255,218,0.10), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 360px 1fr 340px;
+      gap: 18px;
+      padding: 22px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.0)), var(--panel);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .title {
+      font-family: "Playfair Display", serif;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      font-size: 22px;
+    }
+    .subtle { color: var(--muted); font-size: 13px; }
+
+    .left, .right { display: flex; flex-direction: column; }
+
+    .left .content, .right .content { padding: 16px 18px; overflow: auto; }
+
+    .hint {
+      line-height: 1.6;
+      color: #cfd6e6;
+      font-size: 14px;
+    }
+    .hint strong { color: #fff; }
+
+    .howto {
+      display: grid;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(138,180,255,0.10);
+      border: 1px solid rgba(138,180,255,0.25);
+      color: #cfe0ff;
+      padding: 6px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+    }
+
+    .center {
+      position: relative;
+      display: grid; place-items: center;
+      padding: 8px;
+    }
+
+    /* Wheel container */
+    .wheel-wrap {
+      width: 720px; height: 720px; max-width: 100%; max-height: calc(100vh - 80px);
+      display: grid; place-items: center;
+    }
+    svg { width: 100%; height: 100%; }
+
+    .wheel-shadow {
+      position: absolute; width: 65%; height: 65%;
+      filter: blur(30px); opacity: 0.5;
+      background: radial-gradient(closest-side, rgba(163,255,218,0.25), transparent 70%);
+      border-radius: 50%;
+      z-index: 0; transform: translateY(12px);
+      pointer-events: none; /* do not block slice clicks */
+    }
+
+    .mix-button {
+      position: absolute;
+      width: 160px; height: 160px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: linear-gradient(160deg, rgba(163,255,218,0.12), rgba(138,180,255,0.12));
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35), inset 0 0 40px rgba(163,255,218,0.15);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 200ms ease, box-shadow 200ms ease;
+    }
+    .mix-button:hover { transform: scale(1.04); box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 0 60px rgba(163,255,218,0.22); }
+    .mix-label { font-weight: 700; letter-spacing: 0.8px; font-size: 18px; }
+    .mix-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* Ensure SVG group rotates around its own center and doesn't jump */
+    #wheel { transform-box: fill-box; transform-origin: center; will-change: transform; }
+    .spin { animation: spin 1.2s cubic-bezier(.2,.6,.2,1); }
+    @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(660deg); } }
+
+    .slice-group { transition: transform 180ms ease; cursor: pointer; }
+    .slice-group image { pointer-events: none; }
+    .slice-group path { pointer-events: auto; }
+    .slice-group.disabled { opacity: 0.28; cursor: not-allowed; }
+
+    .cat-label {
+      font-size: 11px; fill: #cfd6e6; text-anchor: middle; pointer-events: none;
+      paint-order: stroke; stroke: rgba(15,17,21,0.85); stroke-width: 4px; stroke-linejoin: round;
+    }
+
+    .legend { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 10px rgba(163,255,218,0.6); }
+
+    /* Right controls */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+    .switch { position: relative; width: 52px; height: 28px; background: #2a2f3a; border-radius: 999px; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: background 180ms ease; }
+    .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: transform 180ms ease; }
+    .switch.on { background: linear-gradient(180deg, rgba(163,255,218,0.4), rgba(138,180,255,0.35)); }
+    .switch.on::after { transform: translateX(24px); }
+
+    .check { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+    .check input { appearance: none; width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.18); background: #1b2030; position: relative; cursor: pointer; }
+    .check input:checked { background: linear-gradient(180deg, rgba(163,255,218,0.25), rgba(138,180,255,0.25)); border-color: rgba(163,255,218,0.6); }
+    .check input:checked::after { content: "\2713"; position: absolute; color: #eafff6; font-size: 12px; left: 3px; top: -2px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .chip { padding: 4px 8px; background: rgba(163,255,218,0.09); border: 1px solid rgba(163,255,218,0.22); border-radius: 999px; font-size: 11px; color: #cfe; }
+
+    /* Left table and flip */
+    .flip {
+      position: relative; perspective: 1200px; height: calc(100% - 56px);
+    }
+    .flip-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 600ms cubic-bezier(.2,.7,.2,1); }
+    .flip.show-back .flip-inner { transform: rotateY(180deg); }
+
+    .side { position: absolute; inset: 0; backface-visibility: hidden; overflow: auto; padding: 16px 18px; }
+    .side.back { transform: rotateY(180deg); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 6px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+    th { text-align: left; color: var(--muted); font-weight: 500; }
+    td .name { font-weight: 600; }
+    td .category { color: var(--muted); font-size: 12px; }
+    .thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
+    .btn-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: 600; }
+
+    .btn, .btn-outline { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-weight: 700; letter-spacing: 0.3px; cursor: pointer; user-select: none; }
+    .btn { background: linear-gradient(160deg, rgba(163,255,218,0.18), rgba(138,180,255,0.18)); border: 1px solid rgba(255,255,255,0.18); color: #eafff6; }
+    .btn:hover { filter: brightness(1.08); }
+    .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.22); color: #e9ecf1; }
+
+    .preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .card { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: #0f121a; }
+    .card img { width: 100%; height: 180px; object-fit: cover; display: block; filter: saturate(1.05); }
+    .card .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent, rgba(0,0,0,0.5)); opacity: 0; transition: opacity 200ms ease; }
+    .card:hover .overlay { opacity: 1; }
+    .card .caption { position: absolute; bottom: 8px; left: 10px; right: 10px; font-size: 12px; font-weight: 600; }
+
+    /* Modal */
+    .modal {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 20;
+      background: rgba(8,10,14,0.55);
+      backdrop-filter: blur(6px);
+    }
+    .modal.show { display: flex; }
+    .sheet {
+      width: 780px; max-width: 90vw; max-height: 80vh; overflow: hidden;
+      border-radius: 16px; background: var(--panel-2);
+      border: 1px solid rgba(255,255,255,0.1); box-shadow: var(--shadow);
+      display: grid; grid-template-rows: auto 1fr;
+    }
+    .sheet .hdr { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .sheet .hdr .select, .sheet .hdr .search { flex: 1; }
+    .select, .search input {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
+      background: #121622; color: var(--text);
+    }
+    .search input::placeholder { color: #8d95a6; }
+    .grid { padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow: auto; }
+    .prod { display: grid; grid-template-rows: 160px auto; gap: 8px; background: #10131a; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; cursor: pointer; }
+    .prod img { width: 100%; height: 160px; object-fit: cover; display: block; }
+    .prod .meta { padding: 8px 10px 10px; }
+    .prod .brand { font-size: 11px; color: var(--muted); }
+    .prod:hover { outline: 2px solid rgba(163,255,218,0.35); }
+
+    .footer-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+
+    .empty-state { display: grid; gap: 12px; margin-top: 6px; }
+
+    /* Theme accent switch */
+    body.men .mix-button { box-shadow: 0 8px 30px rgba(0,0,0,0.35), inset 0 0 40px rgba(138,180,255,0.15); }
+    body.men .dot { background: var(--accent-men); box-shadow: 0 0 10px rgba(138,180,255,0.7); }
+    body.women .mix-button { box-shadow: 0 8px 30px rgba(0,0,0,0.35), inset 0 0 40px rgba(255,154,213,0.18); }
+  </style>
+</head>
+<body class="women">
+  <div class="app">
+    <!-- Left Column -->
+    <section class="panel left" id="leftPanel">
+      <div class="panel-header">
+        <div>
+          <div class="title">Outfit Mixer</div>
+          <div class="subtle">Curate looks by vibe — not rules.</div>
+        </div>
+        <div class="legend"><span class="dot"></span> Interactive</div>
+      </div>
+      <div class="flip" id="flip">
+        <div class="flip-inner">
+          <div class="side front">
+            <div class="content" id="leftContent">
+              <div class="hint">
+                <span class="badge">New • Beta</span>
+                <div class="howto">
+                  <div>• Hover the wheel; slices gently <strong>bloom</strong>.</div>
+                  <div>• Click any slice to <strong>choose category</strong>, then pick a piece.</div>
+                  <div>• Hit <strong>Mix</strong> — we’ll enchant the rest.</div>
+                  <div>• Flip to <strong>Preview</strong> when your look is ready.</div>
+                </div>
+                <div class="empty-state">
+                  <div class="subtle">Pro tip: assign multiple slices to the same category to layer textures (e.g., two tops: tee + blazer).</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="side back">
+            <div class="content">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <div class="title" style="font-size:18px;">Look Preview</div>
+                <button class="btn-outline" id="backBtn">Back</button>
+              </div>
+              <div class="preview-grid" id="previewGrid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center Column: Wheel -->
+    <section class="panel center">
+      <div class="panel-header" style="width:100%">
+        <div class="title">Canvas</div>
+        <div class="subtle">Assign categories; drop pieces into each slice</div>
+      </div>
+      <div class="wheel-wrap">
+        <div class="wheel-shadow"></div>
+        <svg viewBox="-400 -400 800 800" id="wheelSvg" aria-label="Outfit Mixer Wheel" style="overflow: visible;">
+          <defs id="clipDefs"></defs>
+          <g id="wheel" filter="" transform="translate(0,0)">
+            <!-- Slices injected by JS -->
+          </g>
+        </svg>
+        <div class="mix-button" id="mixBtn" title="Mix the look">
+          <div class="mix-label">MIX</div>
+          <div class="mix-sub">spin for ideas</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Controls -->
+    <section class="panel right">
+      <div class="panel-header">
+        <div class="title">Filters</div>
+        <div class="subtle">Dial in your canvas</div>
+      </div>
+      <div class="content">
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight:700">Gender</div>
+            <div class="subtle" style="font-size:11px">Affects styling; not inventory</div>
+          </div>
+          <div class="switch on" id="genderSwitch" role="switch" aria-checked="true" title="Toggle Women/Men"></div>
+        </div>
+        <div style="height:1px; background: rgba(255,255,255,0.06); margin: 8px 0 14px;"></div>
+        <div style="margin-bottom:8px; font-weight:700;">Enable Categories</div>
+        <div id="categoryChecks"></div>
+        <div style="height:1px; background: rgba(255,255,255,0.06); margin: 14px 0;"></div>
+        <div>
+          <div style="font-weight:700;">Active Selections</div>
+          <div id="activeChips" class="chips"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Selection Modal -->
+  <div class="modal" id="selectModal" aria-hidden="true">
+    <div class="sheet">
+      <div class="hdr">
+        <select class="select" id="categorySelect"></select>
+        <div class="search"><input type="text" id="searchInput" placeholder="Search by name or brand..." /></div>
+        <button class="btn-outline" id="closeModal">Close</button>
+      </div>
+      <div class="grid" id="productGrid"></div>
+      <div class="footer-actions">
+        <button class="btn-outline" id="clearSlotBtn">Clear this slice</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Inline catalog to avoid fetch/CORS
+    const CATALOG = {"belts":[{"name":"Classic Leather Belt","brand":"Brand A","image_path":"images/belts/belt1.jpg"},{"name":"Woven Canvas Belt","brand":"Brand B","image_path":"images/belts/belt2.jpg"},{"name":"Reversible Belt","brand":"Brand C","image_path":"images/belts/belt3.jpg"},{"name":"Chain Link Belt","brand":"Brand D","image_path":"images/belts/belt4.jpg"},{"name":"Braided Leather Belt","brand":"Brand E","image_path":"images/belts/belt5.jpg"},{"name":"Designer Buckle Belt","brand":"Brand F","image_path":"images/belts/belt6.jpg"}],"bottoms":[{"name":"Floral Midi Dress","brand":"Brand G","image_path":"images/bottoms/dress1.jpg"},{"name":"Wrap Dress","brand":"Brand H","image_path":"images/bottoms/dress2.jpg"},{"name":"Cocktail Dress","brand":"Brand A","image_path":"images/bottoms/dress3.jpg"},{"name":"Slim Fit Jeans","brand":"Brand B","image_path":"images/bottoms/jeans1.jpg"},{"name":"High-Waisted Jeans","brand":"Brand C","image_path":"images/bottoms/jeans2.jpg"},{"name":"Distressed Denim","brand":"Brand D","image_path":"images/bottoms/jeans3.jpg"},{"name":"Wide Leg Jeans","brand":"Brand E","image_path":"images/bottoms/jeans4.jpg"},{"name":"Pleated Midi Skirt","brand":"Brand F","image_path":"images/bottoms/skirt1.jpg"},{"name":"A-Line Skirt","brand":"Brand G","image_path":"images/bottoms/skirt2.jpg"},{"name":"Pencil Skirt","brand":"Brand H","image_path":"images/bottoms/skirt3.jpg"}],"earrings":[{"name":"Pearl Drop Earrings","brand":"Brand A","image_path":"images/earrings/earrings1.jpg"},{"name":"Gold Hoop Earrings","brand":"Brand B","image_path":"images/earrings/earrings2.jpg"},{"name":"Crystal Stud Earrings","brand":"Brand C","image_path":"images/earrings/earrings3.jpg"},{"name":"Chandelier Earrings","brand":"Brand D","image_path":"images/earrings/earrings4.jpg"},{"name":"Minimalist Bar Earrings","brand":"Brand E","image_path":"images/earrings/earrings5.jpg"}],"gloves":[{"name":"Leather Driving Gloves","brand":"Brand F","image_path":"images/gloves/gloves1.jpg"},{"name":"Cashmere Gloves","brand":"Brand G","image_path":"images/gloves/gloves2.jpg"},{"name":"Fingerless Gloves","brand":"Brand H","image_path":"images/gloves/gloves3.jpg"},{"name":"Winter Wool Gloves","brand":"Brand A","image_path":"images/gloves/gloves4.jpg"},{"name":"Evening Opera Gloves","brand":"Brand B","image_path":"images/gloves/gloves5.jpg"},{"name":"Touchscreen Gloves","brand":"Brand C","image_path":"images/gloves/gloves6.jpg"}],"handbags":[{"name":"Tote Bag","brand":"Brand D","image_path":"images/handbags/handbag1.jpg"},{"name":"Crossbody Bag","brand":"Brand E","image_path":"images/handbags/handbag2.jpg"},{"name":"Clutch Purse","brand":"Brand F","image_path":"images/handbags/handbag3.jpg"},{"name":"Shoulder Bag","brand":"Brand G","image_path":"images/handbags/handbag4.jpg"},{"name":"Bucket Bag","brand":"Brand H","image_path":"images/handbags/handbag5.jpg"},{"name":"Satchel Bag","brand":"Brand A","image_path":"images/handbags/handbag6.jpg"},{"name":"Hobo Bag","brand":"Brand B","image_path":"images/handbags/handbag7.jpg"}],"hats":[{"name":"Fedora Hat","brand":"Brand C","image_path":"images/hats/hat1.jpg"},{"name":"Baseball Cap","brand":"Brand D","image_path":"images/hats/hat2.jpg"},{"name":"Wide Brim Sun Hat","brand":"Brand E","image_path":"images/hats/hat3.jpg"},{"name":"Beanie","brand":"Brand F","image_path":"images/hats/hat4.jpg"},{"name":"Beret","brand":"Brand G","image_path":"images/hats/hat5.jpg"}],"necklaces":[{"name":"Pearl Strand Necklace","brand":"Brand H","image_path":"images/necklaces/necklace1.jpg"},{"name":"Gold Chain Necklace","brand":"Brand A","image_path":"images/necklaces/necklace2.jpg"},{"name":"Pendant Necklace","brand":"Brand B","image_path":"images/necklaces/necklace3.jpg"},{"name":"Choker Necklace","brand":"Brand C","image_path":"images/necklaces/necklace4.jpg"}],"scaves":[{"name":"Silk Scarf","brand":"Brand D","image_path":"images/scaves/scarf1.jpg"},{"name":"Cashmere Scarf","brand":"Brand E","image_path":"images/scaves/scarf2.jpg"},{"name":"Infinity Scarf","brand":"Brand F","image_path":"images/scaves/scarf3.jpg"},{"name":"Printed Square Scarf","brand":"Brand G","image_path":"images/scaves/scarf4.jpg"},{"name":"Wool Blanket Scarf","brand":"Brand H","image_path":"images/scaves/scarf5.jpg"},{"name":"Lightweight Summer Scarf","brand":"Brand A","image_path":"images/scaves/scarf6.jpg"},{"name":"Fringed Wrap Scarf","brand":"Brand B","image_path":"images/scaves/scarf7.jpg"}],"shoes":[{"name":"Leather Oxford Shoes","brand":"Brand C","image_path":"images/shoes/shoes1.jpg"},{"name":"High-Top Sneakers","brand":"Brand D","image_path":"images/shoes/shoes2.jpg"},{"name":"Ankle Boots","brand":"Brand E","image_path":"images/shoes/shoes3.jpg"},{"name":"Running Shoes","brand":"Brand F","image_path":"images/shoes/shoes4.jpg"}],"sunglasses":[{"name":"Aviator Sunglasses","brand":"Brand G","image_path":"images/sunglasses/sunglassess1.jpg"},{"name":"Cat Eye Sunglasses","brand":"Brand H","image_path":"images/sunglasses/sunglassess2.jpg"},{"name":"Round Frame Sunglasses","brand":"Brand A","image_path":"images/sunglasses/sunglassess3.jpg"},{"name":"Wayfarer Sunglasses","brand":"Brand B","image_path":"images/sunglasses/sunglassess4.jpg"},{"name":"Sport Sunglasses","brand":"Brand C","image_path":"images/sunglasses/sunglassess5.jpg"}],"tops":[{"name":"Wool Overcoat","brand":"Brand D","image_path":"images/tops/coat1.jpg"},{"name":"Trench Coat","brand":"Brand E","image_path":"images/tops/coat2.jpg"},{"name":"Puffer Coat","brand":"Brand F","image_path":"images/tops/coat3.jpg"},{"name":"Maxi Dress","brand":"Brand G","image_path":"images/tops/dress1.png"},{"name":"Shift Dress","brand":"Brand H","image_path":"images/tops/dress2.png"},{"name":"Evening Gown","brand":"Brand A","image_path":"images/tops/dress7.jpg"},{"name":"Denim Jacket","brand":"Brand B","image_path":"images/tops/jacket1.jpg"},{"name":"Leather Jacket","brand":"Brand C","image_path":"images/tops/jacket2.jpg"},{"name":"Bomber Jacket","brand":"Brand D","image_path":"images/tops/jacket3.jpg"},{"name":"Cotton T-Shirt","brand":"Brand E","image_path":"images/tops/top1.png"},{"name":"Silk Blouse","brand":"Brand F","image_path":"images/tops/top2.png"},{"name":"Knit Sweater","brand":"Brand G","image_path":"images/tops/top3.png"},{"name":"Linen Shirt","brand":"Brand H","image_path":"images/tops/top4.png"}],"watches":[{"name":"Classic Analog Watch","brand":"Brand A","image_path":"images/watches/watch1.jpg"},{"name":"Digital Sport Watch","brand":"Brand B","image_path":"images/watches/watch2.jpg"},{"name":"Chronograph Watch","brand":"Brand C","image_path":"images/watches/watch3.jpg"},{"name":"Smart Watch","brand":"Brand D","image_path":"images/watches/watch4.jpg"},{"name":"Dress Watch","brand":"Brand E","image_path":"images/watches/watch5.jpg"},{"name":"Dive Watch","brand":"Brand F","image_path":"images/watches/watch6.jpg"}]};
+
+    const DISPLAY_NAME = (key) => {
+      if (key === 'scaves') return 'Scarves';
+      return key.charAt(0).toUpperCase() + key.slice(1);
+    };
+
+    // App State
+    const NUM_SLICES = 12;
+    const RADIUS = 300; // outer
+    const INNER_R = 120; // inner cutout under mix button
+    const slices = Array.from({ length: NUM_SLICES }, (_, i) => ({ id: i, category: null, product: null }));
+    let enabledCategories = new Set(Object.keys(CATALOG));
+    let currentSliceId = null;
+
+    // Elements
+    const wheel = document.getElementById('wheel');
+    const clipDefs = document.getElementById('clipDefs');
+    const leftContent = document.getElementById('leftContent');
+    const initialHintHTML = leftContent.innerHTML; // cache initial instructions
+    const flip = document.getElementById('flip');
+    const previewGrid = document.getElementById('previewGrid');
+    const mixBtn = document.getElementById('mixBtn');
+    const wheelSvg = document.getElementById('wheelSvg');
+
+    // Modal elements
+    const modal = document.getElementById('selectModal');
+    const categorySelect = document.getElementById('categorySelect');
+    const searchInput = document.getElementById('searchInput');
+    const productGrid = document.getElementById('productGrid');
+    const closeModal = document.getElementById('closeModal');
+    const clearSlotBtn = document.getElementById('clearSlotBtn');
+
+    // Right panel elements
+    const categoryChecks = document.getElementById('categoryChecks');
+    const activeChips = document.getElementById('activeChips');
+    const genderSwitch = document.getElementById('genderSwitch');
+
+    // Helpers
+    const rad = (deg) => (deg * Math.PI) / 180;
+    const polar = (r, angleDeg) => [r * Math.cos(rad(angleDeg)), r * Math.sin(rad(angleDeg))];
+
+    function wedgePath(startAngle, endAngle, rOuter, rInner) {
+      const [x1, y1] = polar(rOuter, startAngle);
+      const [x2, y2] = polar(rOuter, endAngle);
+      const [x3, y3] = polar(rInner, endAngle);
+      const [x4, y4] = polar(rInner, startAngle);
+      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+      return `M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${rInner} ${rInner} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+    }
+
+    function centroidAngle(idx) {
+      const sliceAngle = 360 / NUM_SLICES;
+      const start = idx * sliceAngle - 90; // rotate so first is at top
+      const end = start + sliceAngle;
+      return (start + end) / 2;
+    }
+
+    function createWheel() {
+      // Build category select options
+      const catKeys = Object.keys(CATALOG);
+      categorySelect.innerHTML = catKeys.map(k => `<option value="${k}">${DISPLAY_NAME(k)}</option>`).join('');
+
+      // Build right panel category toggles
+      categoryChecks.innerHTML = catKeys.map(k => (
+        `<label class="check"><input type="checkbox" data-cat="${k}" checked><span>${DISPLAY_NAME(k)}</span></label>`
+      )).join('');
+
+      categoryChecks.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const k = cb.dataset.cat;
+          if (cb.checked) enabledCategories.add(k); else enabledCategories.delete(k);
+          refreshEnabledStates();
+          updateActiveChips();
+        });
+      });
+
+      // Build the slice groups
+      const sliceAngle = 360 / NUM_SLICES;
+      for (let i = 0; i < NUM_SLICES; i++) {
+        const startAngle = i * sliceAngle - 90;
+        const endAngle = startAngle + sliceAngle;
+        const pathD = wedgePath(startAngle, endAngle, RADIUS, INNER_R);
+        const clipId = `clip-slice-${i}`;
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'slice-group');
+        g.setAttribute('data-id', i);
+
+        // Base fill path
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('fill', `url(#grad-${i})`);
+        path.setAttribute('stroke', 'rgba(255,255,255,0.08)');
+        path.setAttribute('stroke-width', '1');
+        path.style.pointerEvents = 'visiblePainted';
+
+        // Subtle gradient per slice
+        const grad = document.createElementNS('http://www.w3.org/2000/svg', 'radialGradient');
+        grad.setAttribute('id', `grad-${i}`);
+        grad.innerHTML = `
+          <stop offset="0%" stop-color="rgba(163,255,218,0.10)"></stop>
+          <stop offset="100%" stop-color="rgba(138,180,255,0.14)"></stop>
+        `;
+        wheelSvg.querySelector('defs')?.appendChild(grad);
+
+        // Clip path for image
+        const clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+        clip.setAttribute('id', clipId);
+        const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        clipPath.setAttribute('d', pathD);
+        clip.appendChild(clipPath);
+        clipDefs.appendChild(clip);
+
+        // Image holder (initially empty)
+        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        img.setAttribute('href', '');
+        img.setAttribute('width', RADIUS * 2);
+        img.setAttribute('height', RADIUS * 2);
+        img.setAttribute('x', -RADIUS);
+        img.setAttribute('y', -RADIUS);
+        img.setAttribute('clip-path', `url(#${clipId})`);
+        img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        img.setAttribute('opacity', '0.98');
+
+        // Category label outside
+        const mid = centroidAngle(i);
+        const [lx, ly] = polar(RADIUS + 26, mid);
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', lx);
+        label.setAttribute('y', ly);
+        label.setAttribute('class', 'cat-label');
+        label.textContent = 'Pick';
+
+        // Invisible hit path on top for reliable clicks
+        const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hitPath.setAttribute('d', pathD);
+        hitPath.setAttribute('fill', 'rgba(0,0,0,0.001)');
+        hitPath.style.cursor = 'pointer';
+
+        g.appendChild(img);
+        g.appendChild(path);
+        g.appendChild(label);
+        g.appendChild(hitPath);
+        wheel.appendChild(g);
+
+        // Hover bloom (pop-out) effect
+        g.addEventListener('mouseenter', () => {
+          const [tx, ty] = polar(8, mid);
+          g.style.transform = `translate(${tx}px, ${ty}px)`;
+        });
+        g.addEventListener('mouseleave', () => { g.style.transform = 'translate(0,0)'; });
+
+        // Click to open selector
+        g.addEventListener('click', () => openSelector(i));
+        hitPath.addEventListener('click', () => openSelector(i));
+      }
+
+      // Gender switch behavior
+      genderSwitch.addEventListener('click', () => {
+        const on = !genderSwitch.classList.contains('on');
+        genderSwitch.classList.toggle('on', on);
+        const body = document.body;
+        body.classList.toggle('women', on);
+        body.classList.toggle('men', !on);
+      });
+
+      updateActiveChips();
+    }
+
+    function refreshEnabledStates() {
+      // Grey out slices assigned to disabled categories
+      document.querySelectorAll('.slice-group').forEach(g => {
+        const id = parseInt(g.dataset.id, 10);
+        const cat = slices[id].category;
+        const disabled = cat && !enabledCategories.has(cat);
+        g.classList.toggle('disabled', !!disabled);
+      });
+    }
+
+    function openSelector(sliceId) {
+      currentSliceId = sliceId;
+      const defaultCat = slices[sliceId].category || 'tops';
+      categorySelect.value = defaultCat;
+      searchInput.value = '';
+      renderProducts();
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeSelector() {
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+      currentSliceId = null;
+    }
+
+    function renderProducts() {
+      const cat = categorySelect.value;
+      const items = (CATALOG[cat] || []);
+      const q = searchInput.value.trim().toLowerCase();
+      const filtered = q ? items.filter(it => `${it.name} ${it.brand}`.toLowerCase().includes(q)) : items;
+      productGrid.innerHTML = filtered.map((it, idx) => (
+        `<div class="prod" data-index="${idx}">`+
+          `<img src="${it.image_path}" alt="${it.name}">`+
+          `<div class="meta"><div class="brand">${it.brand}</div><div style="font-weight:600">${it.name}</div></div>`+
+        `</div>`
+      )).join('');
+
+      productGrid.querySelectorAll('.prod').forEach(card => {
+        card.addEventListener('click', () => {
+          const idx = parseInt(card.dataset.index, 10);
+          selectProduct(cat, idx);
+        });
+      });
+    }
+
+    function selectProduct(category, index) {
+      if (currentSliceId == null) return;
+      const item = CATALOG[category][index];
+      const slice = slices[currentSliceId];
+      slice.category = category;
+      slice.product = item;
+      paintSlice(currentSliceId);
+      updateLeftTable();
+      updateActiveChips();
+      closeSelector();
+    }
+
+    function clearSlice(id) {
+      const s = slices[id];
+      s.product = null;
+      // keep category so the user can re-pick within same category; optional clear category
+      paintSlice(id);
+      updateLeftTable();
+      updateActiveChips();
+    }
+
+    // Paint a single slice visuals
+    function paintSlice(id) {
+      const g = wheel.querySelector(`.slice-group[data-id="${id}"]`);
+      if (!g) return;
+      const img = g.querySelector('image');
+      const label = g.querySelector('text');
+      const s = slices[id];
+      label.textContent = s.category ? DISPLAY_NAME(s.category) + (s.product ? '' : ' •') : 'Pick';
+      if (s.product) {
+        img.setAttribute('href', s.product.image_path);
+        img.setAttribute('opacity', '1');
+      } else {
+        img.setAttribute('href', '');
+        img.setAttribute('opacity', '0');
+      }
+      const disabled = s.category && !enabledCategories.has(s.category);
+      g.classList.toggle('disabled', !!disabled);
+    }
+
+    function updateLeftTable() {
+      const chosen = slices.filter(s => s.product);
+      const hasAny = chosen.length > 0;
+      if (!hasAny) {
+        leftContent.innerHTML = initialHintHTML; // restore instructions
+        return;
+      }
+      const rows = chosen.map((s, idx) => (
+        `<tr>`+
+          `<td><img class="thumb" src="${s.product.image_path}" alt="${s.product.name}"></td>`+
+          `<td><div class="name">${s.product.name}</div><div class="category">${DISPLAY_NAME(s.category)}</div></td>`+
+          `<td style="text-align:right"><button class="btn-remove" data-id="${s.id}">Remove</button></td>`+
+        `</tr>`
+      )).join('');
+
+      leftContent.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <div class="title" style="font-size:18px;">Your Picks</div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-outline" id="clearAllBtn">Clear All</button>
+            <button class="btn" id="previewBtn">Preview</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th></th><th>Item</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      leftContent.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = parseInt(btn.dataset.id, 10);
+          clearSlice(id);
+        });
+      });
+
+      leftContent.querySelector('#clearAllBtn').addEventListener('click', () => {
+        slices.forEach(s => { s.product = null; });
+        document.querySelectorAll('.slice-group').forEach(g => {
+          const id = parseInt(g.dataset.id, 10);
+          paintSlice(id);
+        });
+        updateLeftTable();
+        updateActiveChips();
+      });
+
+      leftContent.querySelector('#previewBtn').addEventListener('click', () => {
+        buildPreview();
+        flip.classList.add('show-back');
+      });
+    }
+
+    function buildPreview() {
+      const chosen = slices.filter(s => s.product);
+      previewGrid.innerHTML = chosen.map(s => (
+        `<div class="card">`+
+          `<img src="${s.product.image_path}" alt="${s.product.name}">`+
+          `<div class="overlay"></div>`+
+          `<div class="caption">${s.product.name} — <span style="color:#cfe">${DISPLAY_NAME(s.category)}</span></div>`+
+        `</div>`
+      )).join('');
+    }
+
+    function updateActiveChips() {
+      const selected = slices.filter(s => s.product).map(s => DISPLAY_NAME(s.category));
+      const counts = {};
+      selected.forEach(name => { counts[name] = (counts[name] || 0) + 1; });
+      const chips = Object.entries(counts).map(([name, n]) => `<span class="chip">${name}${n>1?` ×${n}`:''}</span>`).join('');
+      const disabledCats = Array.from(Object.keys(CATALOG)).filter(k => !enabledCategories.has(k));
+      const disabledChips = disabledCats.length ? `<div style="margin-top:8px; font-size:11px; color:var(--muted);">Disabled: ${disabledCats.map(k => DISPLAY_NAME(k)).join(', ')}</div>` : '';
+      activeChips.innerHTML = chips + disabledChips;
+    }
+
+    // Modal events
+    categorySelect.addEventListener('change', renderProducts);
+    searchInput.addEventListener('input', renderProducts);
+    closeModal.addEventListener('click', closeSelector);
+    clearSlotBtn.addEventListener('click', () => {
+      if (currentSliceId != null) {
+        clearSlice(currentSliceId);
+        closeSelector();
+      }
+    });
+
+    // Preview back button
+    document.getElementById('backBtn').addEventListener('click', () => {
+      flip.classList.remove('show-back');
+    });
+
+    // Mix behavior
+    mixBtn.addEventListener('click', () => {
+      const wheelGroup = document.getElementById('wheel');
+      // Ensure transform is only rotation, no previous transforms accumulate
+      wheelGroup.style.transform = 'rotate(0deg)';
+      wheelGroup.classList.remove('spin');
+      void wheelGroup.offsetWidth; // reflow
+      wheelGroup.classList.add('spin');
+
+      // Fill empty slices after a short delay to sync with spin
+      setTimeout(() => {
+        performMix();
+      }, 250);
+    });
+
+    function performMix() {
+      // Determine pool of categories
+      const pool = Array.from(enabledCategories);
+      if (pool.length === 0) return;
+
+      // Track usage to diversify
+      let idx = 0;
+      const used = new Map();
+
+      for (let i = 0; i < slices.length; i++) {
+        const s = slices[i];
+        if (s.product) continue; // keep user's picks
+        // Decide category for this slot
+        let cat = s.category && enabledCategories.has(s.category) ? s.category : pool[idx % pool.length];
+        idx++;
+        s.category = cat;
+        const arr = CATALOG[cat] || [];
+        if (arr.length === 0) continue;
+        const last = used.get(cat) || -1;
+        const next = (last + 1 + Math.floor(Math.random()*3)) % arr.length; // pseudo-variety
+        used.set(cat, next);
+        s.product = arr[next];
+        paintSlice(i);
+      }
+
+      updateLeftTable();
+      updateActiveChips();
+    }
+
+    // Initialize
+    createWheel();
+
+    // Accessibility: close modal on background click or ESC
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeSelector(); });
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSelector(); });
+
+  </script>
+</body>
+</html>

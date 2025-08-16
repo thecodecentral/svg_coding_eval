@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outfit Mixer - Fashion Styler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            color: #212529;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            min-height: 100vh;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        .column {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .column:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Left Column - Instructions & Selected Items */
+        .left-column {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .instructions {
+            margin-bottom: 2rem;
+        }
+        
+        .instructions h2 {
+            color: #495057;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+        
+        .instructions p {
+            line-height: 1.6;
+            color: #6c757d;
+            margin-bottom: 0.8rem;
+        }
+        
+        .selected-items {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+        
+        .selected-items.visible {
+            display: flex;
+        }
+        
+        .selected-items h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .item-table {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .selected-item {
+            display: flex;
+            align-items: center;
+            background: white;
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        .selected-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .item-thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            margin-right: 1rem;
+            border: 2px solid #e9ecef;
+        }
+        
+        .item-details {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        
+        .item-brand {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        
+        .remove-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s ease;
+        }
+        
+        .remove-btn:hover {
+            background: #ff5252;
+        }
+        
+        .preview-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: auto;
+            transition: all 0.3s ease;
+        }
+        
+        .preview-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .preview-panel {
+            display: none;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .preview-panel.visible {
+            display: block;
+        }
+        
+        .outfit-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .preview-item {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .preview-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .preview-item-name {
+            font-size: 0.8rem;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        /* Center Column - Pizza Wheel */
+        .center-column {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .pizza-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pizza-wheel {
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            transition: transform 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .pizza-slice {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            transform-origin: 100% 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid white;
+            overflow: hidden;
+        }
+        
+        .pizza-slice:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .slice-content {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            right: 10%;
+            bottom: 60%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .slice-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transform: rotate(var(--text-rotation));
+        }
+        
+        .slice-thumbnail {
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+            display: none;
+        }
+        
+        .slice-thumbnail.visible {
+            display: block;
+        }
+        
+        .mix-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+        
+        .mix-button:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 12px 35px rgba(255, 107, 107, 0.6);
+        }
+        
+        .category-labels {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            pointer-events: none;
+        }
+        
+        .category-label {
+            position: absolute;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            border: 1px solid #e9ecef;
+            white-space: nowrap;
+        }
+        
+        /* Right Column - Filters */
+        .right-column {
+            padding: 2rem;
+        }
+        
+        .filters h3 {
+            color: #495057;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 1.3rem;
+        }
+        
+        .filter-group {
+            margin-bottom: 2rem;
+        }
+        
+        .filter-group h4 {
+            color: #6c757d;
+            margin-bottom: 1rem;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        .filter-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .filter-option input[type="radio"],
+        .filter-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #667eea;
+        }
+        
+        .filter-option label {
+            color: #495057;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .toggle-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .toggle-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .toggle-label {
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 25px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 19px;
+            width: 19px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(25px);
+        }
+        
+        /* Product Selection Modal */
+        .product-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .product-modal.visible {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 1rem;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #495057;
+            text-transform: capitalize;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-btn:hover {
+            background: #f8f9fa;
+            color: #495057;
+        }
+        
+        .modal-filters {
+            margin-bottom: 2rem;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .product-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .product-name {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .product-brand {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        
+        /* Animations */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .spinning {
+            animation: spin 2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Column -->
+        <div class="column left-column">
+            <div class="instructions">
+                <h2>How to Use Outfit Mixer</h2>
+                <p><strong>1.</strong> Click on any slice of the wheel to browse that category</p>
+                <p><strong>2.</strong> Select items you like from the product gallery</p>
+                <p><strong>3.</strong> Hit the MIX button to get AI-powered recommendations</p>
+                <p><strong>4.</strong> Preview your complete outfit</p>
+                <p><strong>5.</strong> Discover your perfect style combination!</p>
+            </div>
+            
+            <div class="selected-items" id="selectedItems">
+                <h3>Selected Items</h3>
+                <div class="item-table" id="itemTable">
+                    <!-- Selected items will appear here -->
+                </div>
+                <button class="preview-btn" id="previewBtn">Preview Outfit</button>
+            </div>
+            
+            <div class="preview-panel" id="previewPanel">
+                <h3>Your Outfit Preview</h3>
+                <div class="outfit-preview" id="outfitPreview">
+                    <!-- Outfit preview items will appear here -->
+                </div>
+                <button class="back-btn" id="backBtn">Back to Selection</button>
+            </div>
+        </div>
+        
+        <!-- Center Column -->
+        <div class="column center-column">
+            <div class="pizza-container">
+                <svg class="pizza-wheel" id="pizzaWheel" viewBox="0 0 400 400">
+                    <!-- Pizza slices will be generated here -->
+                </svg>
+                <button class="mix-button" id="mixBtn">MIX</button>
+                <div class="category-labels" id="categoryLabels">
+                    <!-- Category labels will be positioned here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column -->
+        <div class="column right-column">
+            <div class="filters">
+                <h3>Filters</h3>
+                
+                <div class="filter-group">
+                    <h4>Gender</h4>
+                    <div class="filter-options">
+                        <div class="filter-option">
+                            <input type="radio" id="unisex" name="gender" value="unisex" checked>
+                            <label for="unisex">Unisex</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="radio" id="women" name="gender" value="women">
+                            <label for="women">Women</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="radio" id="men" name="gender" value="men">
+                            <label for="men">Men</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <h4>Enable Categories</h4>
+                    <div class="toggle-group" id="categoryToggles">
+                        <!-- Category toggles will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Product Selection Modal -->
+    <div class="product-modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Select Items</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            
+            <div class="modal-filters">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search products...">
+            </div>
+            
+            <div class="product-grid" id="productGrid">
+                <!-- Product cards will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Product catalog data
+        const productCatalog = {
+            "belts": [
+                {"name": "Classic Leather Belt", "brand": "Brand A", "image_path": "images/belts/belt1.jpg"},
+                {"name": "Woven Canvas Belt", "brand": "Brand B", "image_path": "images/belts/belt2.jpg"},
+                {"name": "Reversible Belt", "brand": "Brand C", "image_path": "images/belts/belt3.jpg"},
+                {"name": "Chain Link Belt", "brand": "Brand D", "image_path": "images/belts/belt4.jpg"},
+                {"name": "Braided Leather Belt", "brand": "Brand E", "image_path": "images/belts/belt5.jpg"},
+                {"name": "Designer Buckle Belt", "brand": "Brand F", "image_path": "images/belts/belt6.jpg"}
+            ],
+            "bottoms": [
+                {"name": "Floral Midi Dress", "brand": "Brand G", "image_path": "images/bottoms/dress1.jpg"},
+                {"name": "Wrap Dress", "brand": "Brand H", "image_path": "images/bottoms/dress2.jpg"},
+                {"name": "Cocktail Dress", "brand": "Brand A", "image_path": "images/bottoms/dress3.jpg"},
+                {"name": "Slim Fit Jeans", "brand": "Brand B", "image_path": "images/bottoms/jeans1.jpg"},
+                {"name": "High-Waisted Jeans", "brand": "Brand C", "image_path": "images/bottoms/jeans2.jpg"},
+                {"name": "Distressed Denim", "brand": "Brand D", "image_path": "images/bottoms/jeans3.jpg"},
+                {"name": "Wide Leg Jeans", "brand": "Brand E", "image_path": "images/bottoms/jeans4.jpg"},
+                {"name": "Pleated Midi Skirt", "brand": "Brand F", "image_path": "images/bottoms/skirt1.jpg"},
+                {"name": "A-Line Skirt", "brand": "Brand G", "image_path": "images/bottoms/skirt2.jpg"},
+                {"name": "Pencil Skirt", "brand": "Brand H", "image_path": "images/bottoms/skirt3.jpg"}
+            ],
+            "earrings": [
+                {"name": "Pearl Drop Earrings", "brand": "Brand A", "image_path": "images/earrings/earrings1.jpg"},
+                {"name": "Gold Hoop Earrings", "brand": "Brand B", "image_path": "images/earrings/earrings2.jpg"},
+                {"name": "Crystal Stud Earrings", "brand": "Brand C", "image_path": "images/earrings/earrings3.jpg"},
+                {"name": "Chandelier Earrings", "brand": "Brand D", "image_path": "images/earrings/earrings4.jpg"},
+                {"name": "Minimalist Bar Earrings", "brand": "Brand E", "image_path": "images/earrings/earrings5.jpg"}
+            ],
+            "gloves": [
+                {"name": "Leather Driving Gloves", "brand": "Brand F", "image_path": "images/gloves/gloves1.jpg"},
+                {"name": "Cashmere Gloves", "brand": "Brand G", "image_path": "images/gloves/gloves2.jpg"},
+                {"name": "Fingerless Gloves", "brand": "Brand H", "image_path": "images/gloves/gloves3.jpg"},
+                {"name": "Winter Wool Gloves", "brand": "Brand A", "image_path": "images/gloves/gloves4.jpg"},
+                {"name": "Evening Opera Gloves", "brand": "Brand B", "image_path": "images/gloves/gloves5.jpg"},
+                {"name": "Touchscreen Gloves", "brand": "Brand C", "image_path": "images/gloves/gloves6.jpg"}
+            ],
+            "handbags": [
+                {"name": "Tote Bag", "brand": "Brand D", "image_path": "images/handbags/handbag1.jpg"},
+                {"name": "Crossbody Bag", "brand": "Brand E", "image_path": "images/handbags/handbag2.jpg"},
+                {"name": "Clutch Purse", "brand": "Brand F", "image_path": "images/handbags/handbag3.jpg"},
+                {"name": "Shoulder Bag", "brand": "Brand G", "image_path": "images/handbags/handbag4.jpg"},
+                {"name": "Bucket Bag", "brand": "Brand H", "image_path": "images/handbags/handbag5.jpg"},
+                {"name": "Satchel Bag", "brand": "Brand A", "image_path": "images/handbags/handbag6.jpg"},
+                {"name": "Hobo Bag", "brand": "Brand B", "image_path": "images/handbags/handbag7.jpg"}
+            ],
+            "hats": [
+                {"name": "Fedora Hat", "brand": "Brand C", "image_path": "images/hats/hat1.jpg"},
+                {"name": "Baseball Cap", "brand": "Brand D", "image_path": "images/hats/hat2.jpg"},
+                {"name": "Wide Brim Sun Hat", "brand": "Brand E", "image_path": "images/hats/hat3.jpg"},
+                {"name": "Beanie", "brand": "Brand F", "image_path": "images/hats/hat4.jpg"},
+                {"name": "Beret", "brand": "Brand G", "image_path": "images/hats/hat5.jpg"}
+            ],
+            "necklaces": [
+                {"name": "Pearl Strand Necklace", "brand": "Brand H", "image_path": "images/necklaces/necklace1.jpg"},
+                {"name": "Gold Chain Necklace", "brand": "Brand A", "image_path": "images/necklaces/necklace2.jpg"},
+                {"name": "Pendant Necklace", "brand": "Brand B", "image_path": "images/necklaces/necklace3.jpg"},
+                {"name": "Choker Necklace", "brand": "Brand C", "image_path": "images/necklaces/necklace4.jpg"}
+            ],
+            "scaves": [
+                {"name": "Silk Scarf", "brand": "Brand D", "image_path": "images/scaves/scarf1.jpg"},
+                {"name": "Cashmere Scarf", "brand": "Brand E", "image_path": "images/scaves/scarf2.jpg"},
+                {"name": "Infinity Scarf", "brand": "Brand F", "image_path": "images/scaves/scarf3.jpg"},
+                {"name": "Printed Square Scarf", "brand": "Brand G", "image_path": "images/scaves/scarf4.jpg"},
+                {"name": "Wool Blanket Scarf", "brand": "Brand H", "image_path": "images/scaves/scarf5.jpg"},
+                {"name": "Lightweight Summer Scarf", "brand": "Brand A", "image_path": "images/scaves/scarf6.jpg"},
+                {"name": "Fringed Wrap Scarf", "brand": "Brand B", "image_path": "images/scaves/scarf7.jpg"}
+            ],
+            "shoes": [
+                {"name": "Leather Oxford Shoes", "brand": "Brand C", "image_path": "images/shoes/shoes1.jpg"},
+                {"name": "High-Top Sneakers", "brand": "Brand D", "image_path": "images/shoes/shoes2.jpg"},
+                {"name": "Ankle Boots", "brand": "Brand E", "image_path": "images/shoes/shoes3.jpg"},
+                {"name": "Running Shoes", "brand": "Brand F", "image_path": "images/shoes/shoes4.jpg"}
+            ],
+            "sunglasses": [
+                {"name": "Aviator Sunglasses", "brand": "Brand G", "image_path": "images/sunglasses/sunglassess1.jpg"},
+                {"name": "Cat Eye Sunglasses", "brand": "Brand H", "image_path": "images/sunglasses/sunglassess2.jpg"},
+                {"name": "Round Frame Sunglasses", "brand": "Brand A", "image_path": "images/sunglasses/sunglassess3.jpg"},
+                {"name": "Wayfarer Sunglasses", "brand": "Brand B", "image_path": "images/sunglasses/sunglassess4.jpg"},
+                {"name": "Sport Sunglasses", "brand": "Brand C", "image_path": "images/sunglasses/sunglassess5.jpg"}
+            ],
+            "tops": [
+                {"name": "Wool Overcoat", "brand": "Brand D", "image_path": "images/tops/coat1.jpg"},
+                {"name": "Trench Coat", "brand": "Brand E", "image_path": "images/tops/coat2.jpg"},
+                {"name": "Puffer Coat", "brand": "Brand F", "image_path": "images/tops/coat3.jpg"},
+                {"name": "Maxi Dress", "brand": "Brand G", "image_path": "images/tops/dress1.png"},
+                {"name": "Shift Dress", "brand": "Brand H", "image_path": "images/tops/dress2.png"},
+                {"name": "Evening Gown", "brand": "Brand A", "image_path": "images/tops/dress7.jpg"},
+                {"name": "Denim Jacket", "brand": "Brand B", "image_path": "images/tops/jacket1.jpg"},
+                {"name": "Leather Jacket", "brand": "Brand C", "image_path": "images/tops/jacket2.jpg"},
+                {"name": "Bomber Jacket", "brand": "Brand D", "image_path": "images/tops/jacket3.jpg"},
+                {"name": "Cotton T-Shirt", "brand": "Brand E", "image_path": "images/tops/top1.png"},
+                {"name": "Silk Blouse", "brand": "Brand F", "image_path": "images/tops/top2.png"},
+                {"name": "Knit Sweater", "brand": "Brand G", "image_path": "images/tops/top3.png"},
+                {"name": "Linen Shirt", "brand": "Brand H", "image_path": "images/tops/top4.png"}
+            ],
+            "watches": [
+                {"name": "Classic Analog Watch", "brand": "Brand A", "image_path": "images/watches/watch1.jpg"},
+                {"name": "Digital Sport Watch", "brand": "Brand B", "image_path": "images/watches/watch2.jpg"},
+                {"name": "Chronograph Watch", "brand": "Brand C", "image_path": "images/watches/watch3.jpg"},
+                {"name": "Smart Watch", "brand": "Brand D", "image_path": "images/watches/watch4.jpg"},
+                {"name": "Dress Watch", "brand": "Brand E", "image_path": "images/watches/watch5.jpg"},
+                {"name": "Dive Watch", "brand": "Brand F", "image_path": "images/watches/watch6.jpg"}
+            ]
+        };
+
+        // Global state
+        let selectedItems = {};
+        let currentCategory = '';
+        let enabledCategories = new Set(Object.keys(productCatalog));
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            createPizzaWheel();
+            createCategoryToggles();
+            attachEventListeners();
+        });
+
+        function createPizzaWheel() {
+            const categories = Object.keys(productCatalog);
+            const pizzaWheel = document.getElementById('pizzaWheel');
+            const categoryLabels = document.getElementById('categoryLabels');
+            const sliceAngle = 360 / categories.length;
+            
+            // Color palette for slices
+            const colors = [
+                '#ff9999', '#66b3ff', '#99ff99', '#ffcc99',
+                '#ff99cc', '#c2c2f0', '#ffb3e6', '#c4e17f',
+                '#76c7c0', '#f7dc6f', '#bb8fce', '#85c1e9',
+                '#f8c471', '#82e0aa'
+            ];
+
+            categories.forEach((category, index) => {
+                // Create SVG slice
+                const slice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const startAngle = index * sliceAngle;
+                const endAngle = (index + 1) * sliceAngle;
+                
+                const pathData = createSlicePath(200, 200, 180, startAngle, endAngle);
+                slice.setAttribute('d', pathData);
+                slice.setAttribute('fill', colors[index % colors.length]);
+                slice.setAttribute('stroke', 'white');
+                slice.setAttribute('stroke-width', '3');
+                slice.classList.add('pizza-slice');
+                slice.dataset.category = category;
+                slice.style.transformOrigin = '200px 200px';
+                
+                pizzaWheel.appendChild(slice);
+
+                // Add click event
+                slice.addEventListener('click', () => openProductModal(category));
+
+                // Create category label
+                const label = document.createElement('div');
+                label.classList.add('category-label');
+                label.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                
+                // Position label around the wheel
+                const labelAngle = startAngle + (sliceAngle / 2);
+                const labelRadius = 230;
+                const x = 250 + labelRadius * Math.cos((labelAngle - 90) * Math.PI / 180);
+                const y = 250 + labelRadius * Math.sin((labelAngle - 90) * Math.PI / 180);
+                
+                label.style.left = `${x}px`;
+                label.style.top = `${y}px`;
+                label.style.transform = 'translate(-50%, -50%)';
+                
+                categoryLabels.appendChild(label);
+            });
+        }
+
+        function createSlicePath(centerX, centerY, radius, startAngle, endAngle) {
+            const startAngleRad = (startAngle - 90) * Math.PI / 180;
+            const endAngleRad = (endAngle - 90) * Math.PI / 180;
+            
+            const x1 = centerX + radius * Math.cos(startAngleRad);
+            const y1 = centerY + radius * Math.sin(startAngleRad);
+            const x2 = centerX + radius * Math.cos(endAngleRad);
+            const y2 = centerY + radius * Math.sin(endAngleRad);
+            
+            const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+            
+            return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+        }
+
+        function createCategoryToggles() {
+            const togglesContainer = document.getElementById('categoryToggles');
+            const categories = Object.keys(productCatalog);
+            
+            categories.forEach(category => {
+                const toggleItem = document.createElement('div');
+                toggleItem.classList.add('toggle-item');
+                
+                toggleItem.innerHTML = `
+                    <span class="toggle-label">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" data-category="${category}" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                `;
+                
+                togglesContainer.appendChild(toggleItem);
+                
+                // Add event listener
+                const checkbox = toggleItem.querySelector('input');
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        enabledCategories.add(category);
+                    } else {
+                        enabledCategories.delete(category);
+                    }
+                    updatePizzaWheel();
+                });
+            });
+        }
+
+        function updatePizzaWheel() {
+            const slices = document.querySelectorAll('.pizza-slice');
+            const labels = document.querySelectorAll('.category-label');
+            
+            slices.forEach((slice, index) => {
+                const category = slice.dataset.category;
+                const label = labels[index];
+                
+                if (enabledCategories.has(category)) {
+                    slice.style.opacity = '1';
+                    slice.style.pointerEvents = 'auto';
+                    label.style.opacity = '1';
+                } else {
+                    slice.style.opacity = '0.3';
+                    slice.style.pointerEvents = 'none';
+                    label.style.opacity = '0.3';
+                }
+            });
+        }
+
+        function attachEventListeners() {
+            // Mix button
+            document.getElementById('mixBtn').addEventListener('click', mixOutfit);
+            
+            // Preview button
+            document.getElementById('previewBtn').addEventListener('click', showPreview);
+            
+            // Back button
+            document.getElementById('backBtn').addEventListener('click', hidePreview);
+            
+            // Modal close
+            document.getElementById('closeModal').addEventListener('click', closeProductModal);
+            document.getElementById('productModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeProductModal();
+                }
+            });
+            
+            // Search input
+            document.getElementById('searchInput').addEventListener('input', filterProducts);
+        }
+
+        function openProductModal(category) {
+            currentCategory = category;
+            const modal = document.getElementById('productModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const searchInput = document.getElementById('searchInput');
+            
+            modalTitle.textContent = `Select ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+            searchInput.value = '';
+            
+            displayProducts(productCatalog[category]);
+            modal.classList.add('visible');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('visible');
+        }
+
+        function displayProducts(products) {
+            const productGrid = document.getElementById('productGrid');
+            productGrid.innerHTML = '';
+            
+            products.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.classList.add('product-card');
+                
+                productCard.innerHTML = `
+                    <img src="${product.image_path}" alt="${product.name}" class="product-image">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-brand">${product.brand}</div>
+                `;
+                
+                productCard.addEventListener('click', () => selectProduct(currentCategory, product));
+                productGrid.appendChild(productCard);
+            });
+        }
+
+        function filterProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const products = productCatalog[currentCategory];
+            const filteredProducts = products.filter(product => 
+                product.name.toLowerCase().includes(searchTerm) ||
+                product.brand.toLowerCase().includes(searchTerm)
+            );
+            
+            displayProducts(filteredProducts);
+        }
+
+        function selectProduct(category, product) {
+            selectedItems[category] = product;
+            updateSelectedItemsDisplay();
+            updateSliceThumbnail(category, product.image_path);
+            closeProductModal();
+        }
+
+        function updateSelectedItemsDisplay() {
+            const itemTable = document.getElementById('itemTable');
+            const selectedItemsContainer = document.getElementById('selectedItems');
+            const instructions = document.querySelector('.instructions');
+            
+            itemTable.innerHTML = '';
+            
+            Object.entries(selectedItems).forEach(([category, product]) => {
+                const itemElement = document.createElement('div');
+                itemElement.classList.add('selected-item');
+                
+                itemElement.innerHTML = `
+                    <img src="${product.image_path}" alt="${product.name}" class="item-thumbnail">
+                    <div class="item-details">
+                        <div class="item-name">${product.name}</div>
+                        <div class="item-brand">${product.brand}</div>
+                    </div>
+                    <button class="remove-btn" onclick="removeItem('${category}')">Remove</button>
+                `;
+                
+                itemTable.appendChild(itemElement);
+            });
+            
+            if (Object.keys(selectedItems).length > 0) {
+                instructions.style.display = 'none';
+                selectedItemsContainer.classList.add('visible');
+            } else {
+                instructions.style.display = 'block';
+                selectedItemsContainer.classList.remove('visible');
+            }
+        }
+
+        function updateSliceThumbnail(category, imagePath) {
+            const slice = document.querySelector(`[data-category="${category}"]`);
+            let thumbnail = slice.parentElement.querySelector(`[data-category="${category}"] + .slice-thumbnail`);
+            
+            if (!thumbnail) {
+                thumbnail = document.createElement('img');
+                thumbnail.classList.add('slice-thumbnail');
+                thumbnail.dataset.category = category;
+                slice.parentElement.appendChild(thumbnail);
+            }
+            
+            thumbnail.src = imagePath;
+            thumbnail.classList.add('visible');
+            
+            // Position thumbnail on the slice
+            const sliceIndex = Array.from(slice.parentElement.children).indexOf(slice);
+            const angle = (sliceIndex * 360 / Object.keys(productCatalog).length);
+            const radius = 120;
+            const x = 200 + radius * Math.cos((angle - 90) * Math.PI / 180);
+            const y = 200 + radius * Math.sin((angle - 90) * Math.PI / 180);
+            
+            thumbnail.style.position = 'absolute';
+            thumbnail.style.left = `${x - 15}px`;
+            thumbnail.style.top = `${y - 15}px`;
+        }
+
+        function removeItem(category) {
+            delete selectedItems[category];
+            updateSelectedItemsDisplay();
+            
+            // Hide thumbnail
+            const thumbnail = document.querySelector(`[data-category="${category}"].slice-thumbnail`);
+            if (thumbnail) {
+                thumbnail.classList.remove('visible');
+            }
+        }
+
+        function mixOutfit() {
+            const pizzaWheel = document.getElementById('pizzaWheel');
+            pizzaWheel.classList.add('spinning');
+            
+            setTimeout(() => {
+                pizzaWheel.classList.remove('spinning');
+                
+                // Get categories that don't have selections
+                const unselectedCategories = Array.from(enabledCategories).filter(category => 
+                    !selectedItems[category]
+                );
+                
+                // Randomly select products for unselected categories
+                unselectedCategories.forEach(category => {
+                    const products = productCatalog[category];
+                    const randomProduct = products[Math.floor(Math.random() * products.length)];
+                    selectProduct(category, randomProduct);
+                });
+                
+                // Show notification
+                showMixNotification();
+            }, 2000);
+        }
+
+        function showMixNotification() {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 1rem 2rem;
+                border-radius: 12px;
+                font-weight: 600;
+                z-index: 2000;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            `;
+            notification.textContent = '✨ Perfect outfit mixed! Check your selections.';
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function showPreview() {
+            const selectedItemsContainer = document.getElementById('selectedItems');
+            const previewPanel = document.getElementById('previewPanel');
+            const outfitPreview = document.getElementById('outfitPreview');
+            
+            selectedItemsContainer.classList.remove('visible');
+            previewPanel.classList.add('visible');
+            
+            outfitPreview.innerHTML = '';
+            
+            Object.entries(selectedItems).forEach(([category, product]) => {
+                const previewItem = document.createElement('div');
+                previewItem.classList.add('preview-item');
+                
+                previewItem.innerHTML = `
+                    <img src="${product.image_path}" alt="${product.name}">
+                    <div class="preview-item-name">${product.name}</div>
+                `;
+                
+                outfitPreview.appendChild(previewItem);
+            });
+        }
+
+        function hidePreview() {
+            const selectedItemsContainer = document.getElementById('selectedItems');
+            const previewPanel = document.getElementById('previewPanel');
+            
+            previewPanel.classList.remove('visible');
+            selectedItemsContainer.classList.add('visible');
+        }
+    </script>
+</body>
+</html>
