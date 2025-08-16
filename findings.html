@@ -80,10 +80,9 @@
         }
         
         .table-wrapper {
-            overflow: auto;
+            overflow-x: auto;
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            max-height: 600px;
             border: 1px solid #e2e8f0;
         }
         
@@ -345,62 +344,77 @@
                         <tr>
                             <td><strong>Left column: show initial instructions</strong></td>
                             <td>3</td>
+                            <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Left column: showing details for selected product?</strong></td>
+                            <td>3</td>
                             <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Left column: abilityt to remove product?</strong></td>
                             <td>3</td>
+                            <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Left column: preview working?</strong></td>
-                            <td>2</td>
+                            <td>2<br/>(weird rendering)</td>
+                            <td>2<br/>(impl not per specs)</td>
                         </tr>
                         <tr>
                             <td><strong>Middle column: are category labels aligned properly?</strong></td>
+                            <td>3</td>
                             <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Middle column: are thumbnails shown on the slice and properly aligned?</strong></td>
                             <td>3</td>
+                            <td>2<br/>(overlapped with category names)</td>
                         </tr>
                         <tr>
-                            <td><strong>Middle column: when I select products, can they be filtered by a category?</strong></td>
-                            <td>1</td>
+                            <td><strong>Middle column: can I select a product?</strong></td>
+                            <td>3</td>
+                            <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Middle column: when I select products, can they be filtered by a keyword?</strong></td>
+                            <td>3</td>
                             <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Middle column: when I mouse over a slice, does it show a pop-up animation?</strong></td>
                             <td>3</td>
+                            <td>2</td>
                         </tr>
                         <tr>
                             <td><strong>Middle column: When I click on the Mix button, does the pizza animate and with a pleasing animation?</strong></td>
                             <td>3</td>
+                            <td>2</td>
                         </tr>
                         <tr>
                             <td><strong>Middle column: When I click on the Mix button, do the empty slices get populated?</strong></td>
+                            <td>3</td>
                             <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Right column: Are category toggles shown?</strong></td>
                             <td>3</td>
+                            <td>1</td>
                         </tr>                      
                         <tr>
                             <td><strong>Right column: Are the toggles cause the number of slices change dynamically?</strong></td>
                             <td>3</td>
+                            <td>1</td>
                         </tr>                      
                         <tr>
                             <td><strong>Mist: Is the UI aesthetically pleasing?</strong></td>
                             <td>1</td>
+                            <td>3</td>
                         </tr>
                         <tr>
                             <td><strong>Notes</strong></td>
-                            <td>Grok 4 (Cursor) seems to be very good at coding out the business logic. However, it lacks in design sense and the UI is not aesthetically pleasing.</td>
+                            <td style="text-align: left;">Seems to be very good at coding out the business logic. However, it lacks in design sense and the UI is not aesthetically pleasing.</td>
+                            <td style="text-align: left;">A bit weak on implementing the specs correctly, aesthetically more pleasing than Grok 4 (Cursor).</td>
                         </tr>
 
                       
@@ -426,33 +440,21 @@
                         <tr>
                             <th>Grok 4 (Cursor)</th>
                             <td>
-                                <img src="src/cursor/grok4/images/gshot-2025-08-15-222824-eRoI.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
-                                <img src="src/cursor/grok4/images/gshot-2025-08-15-225029-JtgF.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
-                                <img src="src/cursor/grok4/images/gshot-2025-08-15-225041-eSkj.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                                <img src="src/cursor/grok4/images/1.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                                <img src="src/cursor/grok4/images/2.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                                <img src="src/cursor/grok4/images/3.png" alt="Grok 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Sonnet 4 (Cursor)</th>
+                            <td>
+                                <img src="src/cursor/sonnet4/images/1.png" alt="Sonnet 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                                <img src="src/cursor/sonnet4/images/2.png" alt="Sonnet 4 Screenshot" class="artifact-img" onclick="openModal(this)">
+                                <img src="src/cursor/sonnet4/images/3.png" alt="Sonnet 4 Screenshot" class="artifact-img" onclick="openModal(this)">
                             </td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-        
-        <div class="notes-section">
-            <div class="note-card">
-                <div class="note-title">
-                    <span class="status-icon">⚡</span> Cursor CLI
-                </div>
-                <div class="note-content">
-                    The quality seems to be good but takes a very long time to do anything. Performance could be improved for better developer experience.
-                </div>
-            </div>
-            
-            <div class="note-card">
-                <div class="note-title">
-                    <span class="status-icon">🤖</span> Grok
-                </div>
-                <div class="note-content">
-                    Good with business logic but lacks in design sense. Elements positioned correctly in the wheel, slot toggles are kind of working. The page looks really ugly.
-                </div>
             </div>
         </div>
         
