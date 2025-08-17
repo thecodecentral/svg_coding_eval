@@ -43,4 +43,4 @@ To see bigger images, clone this repository and open `benchmark/index.html` in a
 
 
 ### Opus 4.1 in Cursor CLI
-![Opus 4.1 in Cursor CLI](src/cursor_cli/opus4/images/2.png)
+![Opus 4.1 in Cursor CLI](src/cursor_cli/opus4_1/images/2.png)
