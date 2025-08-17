@@ -2,7 +2,7 @@
 
 This repository documents the outputs of various coding agent for evaluations. The goal is to build intuition about the capabilities and limitations of popular coding agents.
 
-This report is by no means scientific. The results are intended as a broad overview, not definitive proof of performance - interpret them accordingly.
+This benchmark represents my personal experiments with various AI coding assistants, not a rigorous scientific study or official evaluation. The scores and observations are entirely subjective, based on my own criteria and preferences for UI implementation. Additionally, LLMs are non-deterministic by nature — running the same prompt multiple times may produce different outcomes. Different users might reach completely different conclusions based on their priorities. Consider this a snapshot of one developer's experience rather than authoritative guidance on tool selection. 
 
 
 ## Methodology
