@@ -6,18 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UI Challenge for Coding Agents: My Personal Benchmark</title>
     <style>
-        :root {
-            --bg: #f6f8fb;
-            --card-bg: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --primary: #2563eb;
-            --accent: #7c3aed;
-            --border: #e5e7eb;
-            --border-subtle: #eef2f7;
-            --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
-            --shadow-soft: 0 2px 10px rgba(17, 24, 39, 0.06);
-        }
         * {
             margin: 0;
             padding: 0;
@@ -25,90 +13,112 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            color: #ffffff;
             min-height: 100vh;
-            padding: 32px;
-            line-height: 1.6;
+            padding: 10px;
+            line-height: 1.2;
+            overflow-x: auto;
         }
 
         .container {
-            background: var(--card-bg);
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            padding: 48px 40px;
-            max-width: 1200px;
-            margin: 0 auto;
+            background: #ffffff;
+            border: 8px solid #000000;
+            padding: 20px;
+            margin: 0;
+            box-shadow: 15px 15px 0px #ff0000, 30px 30px 0px #000000;
+            position: relative;
+        }
+
+        .container::before {
+            content: "";
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            background: repeating-linear-gradient(
+                45deg,
+                #ffff00,
+                #ffff00 5px,
+                #000000 5px,
+                #000000 10px
+            );
+            z-index: -1;
         }
 
         h1 {
-            color: #111827;
-            font-size: 2.25rem;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 8px;
-            letter-spacing: -0.02em;
+            color: #000000;
+            font-size: 3rem;
+            font-weight: 900;
+            text-align: left;
+            margin-bottom: 5px;
+            letter-spacing: -2px;
+            text-transform: uppercase;
+            border-bottom: 10px solid #ff0000;
+            padding-bottom: 10px;
+            background: #ffff00;
+            padding: 20px;
+            margin: -20px -20px 20px -20px;
+            transform: rotate(-1deg);
         }
 
         .subtitle {
-            text-align: center;
-            color: var(--muted);
-            font-size: 1rem;
-            margin-bottom: 36px;
+            display: none;
         }
 
         .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 28px;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border);
+            background: #ffffff;
+            border: 6px solid #000000;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 8px 8px 0px #00ff00;
+            position: relative;
         }
 
-        .card + .card {
-            margin-top: 16px;
+        .card::after {
+            content: "";
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 30px;
+            height: 30px;
+            background: #ff0000;
+            border: 3px solid #000000;
         }
 
         .card-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 14px;
-            border-bottom: 1px solid var(--border);
+            display: block;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 5px solid #000000;
+            background: #000000;
+            color: #ffffff;
+            padding: 15px;
+            margin: -15px -15px 15px -15px;
         }
 
         .card-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 14px;
-            color: white;
-            font-size: 18px;
-            box-shadow: var(--shadow-soft);
+            display: none;
         }
 
         h2 {
-            color: #111827;
-            font-size: 1.25rem;
-            font-weight: 700;
+            color: #ffffff;
+            font-size: 1.8rem;
+            font-weight: 900;
             margin: 0;
-            letter-spacing: -0.01em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 3px 3px 0px #ff0000;
         }
 
         .table-wrapper {
             overflow-x: auto;
-            border-radius: 10px;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border);
-            background: #fff;
-            margin-top: 8px;
+            border: 6px solid #000000;
+            background: #ffffff;
+            margin-top: 10px;
+            box-shadow: 12px 12px 0px #0000ff;
         }
 
         table {
@@ -117,6 +127,8 @@
             border-collapse: separate;
             border-spacing: 0;
             font-size: 14px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
         }
 
         thead {
@@ -126,16 +138,22 @@
         }
 
         th {
-            background: linear-gradient(180deg, #fbfdff 0%, #f3f6fb 100%);
-            color: #374151;
-            font-weight: 700;
-            padding: 12px 10px;
+            background: #000000;
+            color: #ffffff;
+            font-weight: 900;
+            padding: 15px 8px;
             text-align: center;
             font-size: 12px;
-            border-bottom: 1px solid var(--border);
+            border: 3px solid #ffffff;
             position: sticky;
             top: 0;
             white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        th:nth-child(odd) {
+            background: #ff0000;
         }
 
         th:first-child {
@@ -145,124 +163,134 @@
             position: sticky;
             left: 0;
             z-index: 21;
-            background: linear-gradient(180deg, #fbfdff 0%, #f3f6fb 100%);
+            background: #ffff00;
+            color: #000000;
+            border-right: 6px solid #000000;
         }
 
         td {
-            padding: 12px 10px;
+            padding: 12px 8px;
             text-align: center;
-            border-bottom: 1px solid var(--border-subtle);
+            border: 2px solid #000000;
             background: #ffffff;
-            transition: background-color 0.2s;
+            color: #000000;
+            font-weight: bold;
         }
 
         td:first-child {
             text-align: left;
             padding-left: 16px;
-            font-weight: 600;
-            color: #111827;
+            font-weight: 900;
+            color: #000000;
             position: sticky;
             left: 0;
             background: #ffffff;
-            border-right: 1px solid var(--border);
+            border-right: 6px solid #000000;
             z-index: 10;
         }
 
         tbody tr:nth-child(even) td {
-            background-color: #fbfdff;
+            background-color: #eeeeee;
         }
 
         tbody tr:hover td {
-            background-color: #f0f5ff;
+            background-color: #ffff00;
+            color: #000000;
         }
 
         tbody tr:hover td:first-child {
-            background-color: #eef4ff;
+            background-color: #ff0000;
+            color: #ffffff;
         }
 
         .badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 6px 10px;
+            border: 3px solid #000000;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 900;
+            text-transform: uppercase;
         }
 
         .badge-success {
-            background: #dcfce7;
-            color: #14532d;
+            background: #00ff00;
+            color: #000000;
         }
 
         .badge-warning {
-            background: #fff7ed;
-            color: #7c2d12;
+            background: #ffff00;
+            color: #000000;
         }
 
         .badge-danger {
-            background: #fee2e2;
-            color: #7f1d1d;
+            background: #ff0000;
+            color: #ffffff;
         }
 
         .notes-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 16px;
+            display: block;
             margin-top: 20px;
         }
 
         .note-card {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            border-radius: 12px;
-            padding: 18px;
-            color: white;
-            box-shadow: var(--shadow-soft);
-            transition: transform 0.2s, box-shadow 0.2s;
+            background: #000000;
+            border: 6px solid #ffffff;
+            padding: 20px;
+            color: #ffffff;
+            box-shadow: 10px 10px 0px #ff0000;
+            margin-bottom: 20px;
+            transform: rotate(1deg);
         }
 
-        .note-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        .note-card:nth-child(even) {
+            transform: rotate(-1deg);
+            box-shadow: 10px 10px 0px #00ff00;
         }
 
         .note-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
+            font-size: 18px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
         .note-content {
             font-size: 14px;
-            line-height: 1.7;
-            opacity: 0.95;
+            line-height: 1.4;
+            font-weight: bold;
         }
 
         .status-icon {
-            font-size: 16px;
-            margin-right: 4px;
+            display: none;
         }
 
         .empty-cell {
-            color: #cbd5e0;
+            color: #999999;
             font-size: 12px;
+            font-weight: bold;
         }
 
         .artifact-img {
-            max-width: 360px;
+            max-width: 300px;
             width: 100%;
             height: auto;
-            border-radius: 8px;
+            border: 8px solid #000000;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-soft);
-            margin: 8px;
+            margin: 5px;
+            box-shadow: 8px 8px 0px #ff0000;
+            filter: contrast(1.2) saturate(1.5);
         }
 
         .artifact-img:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
+            transform: rotate(2deg);
+            box-shadow: 15px 15px 0px #00ff00;
+        }
+
+        .artifact-img:nth-child(even):hover {
+            transform: rotate(-2deg);
+            box-shadow: 15px 15px 0px #0000ff;
         }
 
         .modal {
@@ -273,8 +301,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            animation: fadeIn 0.2s ease-out;
+            background-color: #000000;
             cursor: zoom-out;
         }
 
@@ -288,7 +315,8 @@
             max-width: 90%;
             max-height: 90%;
             position: relative;
-            animation: scaleIn 0.2s ease-out;
+            border: 10px solid #ffffff;
+            box-shadow: 20px 20px 0px #ff0000;
         }
 
         .modal-content img {
@@ -297,157 +325,248 @@
             max-width: 100%;
             max-height: 90vh;
             object-fit: contain;
-            border-radius: 8px;
+            display: block;
         }
 
         .modal-close {
             position: absolute;
-            top: -40px;
-            right: 0;
-            color: white;
-            font-size: 36px;
-            font-weight: bold;
+            top: -50px;
+            right: -10px;
+            color: #ffffff;
+            font-size: 48px;
+            font-weight: 900;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.15);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            background: #ff0000;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s;
+            font-family: 'Courier New', monospace;
         }
 
         .modal-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes scaleIn {
-            from {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
+            background: #ffffff;
+            color: #ff0000;
         }
 
         .disclaimer {
-            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
-            color: #7c2d12;
-            font-size: 14px;
-            line-height: 1.7;
-            padding: 18px 24px;
-            border-radius: 10px;
-            margin-bottom: 28px;
-            border-left: 4px solid #f97316;
-            font-style: italic;
+            background: #ffff00;
+            color: #000000;
+            font-size: 16px;
+            line-height: 1.3;
+            padding: 20px;
+            border: 8px solid #000000;
+            margin-bottom: 25px;
+            font-weight: 900;
+            box-shadow: 12px 12px 0px #ff0000;
+            transform: rotate(-0.5deg);
         }
         
         .disclaimer strong {
-            font-style: normal;
-            color: #9a3412;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .table-caption {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            color: #78350f;
-            font-size: 14px;
-            padding: 16px 20px;
+            background: #ff0000;
+            color: #ffffff;
+            font-size: 16px;
+            padding: 20px;
             text-align: left;
-            border-radius: 10px;
+            border: 6px solid #000000;
             margin-bottom: 20px;
-            font-weight: 600;
-            border: 2px solid #fbbf24;
-            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
+            font-weight: 900;
+            box-shadow: 10px 10px 0px #000000;
+            text-transform: uppercase;
         }
         
         .table-caption-title {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
+            font-size: 18px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            display: block;
+            letter-spacing: 2px;
         }
         
         .table-caption-title::before {
-            content: "📊";
+            content: ">>> ";
             margin-right: 8px;
-            font-size: 18px;
+            font-size: 20px;
         }
         
         .score-item {
-            padding: 4px 0;
+            padding: 8px 0;
             display: flex;
             align-items: center;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: bold;
         }
         
         .score-badge {
             display: inline-block;
-            width: 24px;
-            height: 24px;
-            background: #78350f;
-            color: white;
-            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            background: #000000;
+            color: #ffffff;
+            border: 3px solid #ffffff;
             text-align: center;
             line-height: 24px;
-            font-weight: 700;
-            margin-right: 12px;
+            font-weight: 900;
+            margin-right: 15px;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 30px;
+            list-style: none;
+        }
+
+        li {
+            margin-bottom: 15px;
+            font-weight: bold;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        li::before {
+            content: "█";
+            position: absolute;
+            left: 0;
+            color: #ff0000;
+            font-size: 18px;
+        }
+
+        li:nth-child(even)::before {
+            color: #00ff00;
+        }
+
+        strong {
+            background: #000000;
+            color: #ffffff;
+            padding: 2px 4px;
+        }
+
+        em {
+            background: #ffff00;
+            color: #000000;
+            font-style: normal;
+            font-weight: 900;
+            padding: 2px 4px;
+        }
+
+        /* Specific styles for My Impressions section */
+        .impressions-list {
+            background: #ffffff;
+            padding: 20px;
+            border: 4px solid #000000;
+        }
+
+        .impressions-list li {
+            color: #000000;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .impressions-list strong {
+            background: transparent;
+            color: #ff0000;
+            padding: 0;
+            font-size: 1.1em;
+            text-transform: uppercase;
+        }
+
+        .impressions-list em {
+            background: #ffff00;
+            color: #000000;
+            padding: 2px 6px;
+            font-weight: 900;
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 24px 18px;
+                padding: 15px;
+                box-shadow: 8px 8px 0px #ff0000, 16px 16px 0px #000000;
             }
 
             h1 {
-                font-size: 1.6rem;
+                font-size: 2rem;
+                padding: 15px;
+                margin: -15px -15px 15px -15px;
             }
 
-            .notes-section {
-                grid-template-columns: 1fr;
+            table {
+                min-width: 600px;
             }
         }
 
         @media print {
             body {
                 background: #ffffff;
+                color: #000000;
                 padding: 0;
             }
             .container {
                 box-shadow: none;
-                border: none;
-                padding: 0;
-                max-width: 100%;
+                border: 2px solid #000000;
+                padding: 10px;
             }
             .card {
                 box-shadow: none;
+                border: 2px solid #000000;
             }
             .artifact-img {
                 box-shadow: none;
-                border: 1px solid #ddd;
+                border: 2px solid #000000;
+                filter: none;
             }
-            .modal { display: none !important; }
+            .modal { 
+                display: none !important; 
+            }
+        }
+
+        /* Additional brutalist elements */
+        .container::after {
+            content: "BENCHMARK DATA";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 8rem;
+            font-weight: 900;
+            color: rgba(255, 0, 0, 0.1);
+            z-index: 0;
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+        }
+
+        .card {
+            z-index: 1;
+        }
+
+        /* Harsh grid overlay */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: -1;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>UI Challenge for Coding Agents: <br/>My Personal Benchmark</h1>
+        <h1>UI Challenge for Coding Agents:<br/>My Personal Benchmark</h1>
         
         <div class="disclaimer">
             <strong>Important disclaimer:</strong> This benchmark represents my personal experiments with various AI coding assistants, not a rigorous scientific study or official evaluation. The scores and observations are entirely subjective, based on my own criteria and preferences for UI implementation. Additionally, LLMs are non-deterministic by nature — running the same prompt multiple times may produce different outcomes. Different users might reach completely different conclusions based on their priorities. Consider this a snapshot of one developer's experience rather than authoritative guidance on tool selection.
@@ -455,7 +574,6 @@
 
         <div class="card">
             <div class="card-header">
-                <div class="card-icon">📊</div>
                 <h2>Evaluation Results</h2>
             </div>
             <div class="table-caption">
@@ -674,11 +792,10 @@
 
         <div class="card" style="margin-top: 30px;">
             <div class="card-header">
-                <div class="card-icon">📝</div>
                 <h2>My Impressions</h2>
             </div>
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                <ul style="margin: 0; padding-left: 20px;">
+                <ul class="impressions-list" style="margin: 0; padding-left: 20px;">
                     <li><strong>GPT-5</strong> tends to favor <em>dark themes</em>, producing smooth animations and
                         seamless page transitions. The overall look is sleek and professional, resembling high-end photo
                         editing software.</li>
@@ -693,7 +810,6 @@
         </div>
         <div class="card">
             <div class="card-header">
-                <div class="card-icon">📊</div>
                 <h2>Artifacts Gallery</h2>
             </div>
             <div class="table-wrapper">
