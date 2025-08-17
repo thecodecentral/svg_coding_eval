@@ -21,10 +21,8 @@ Please note that the code agents are not run in a fully isolated environment. Th
 
 To view the generated artifact, which is just a HTML file, open it in a browser.
 
-Some questions to ask:
-
-- Is the prototype aesthetically pleasing?
-- Are the UI elements positioned correctly? This can be especially challenging for some LLMs.
+- The benchmark: `benchmark/index.html`
+- The UI pages: `src/`
 
 ## Attribution
 
